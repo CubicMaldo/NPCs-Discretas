@@ -1,13 +1,6 @@
 class_name NPC
 extends CharacterBody2D
 
-const Personality = preload("res://scripts/entities/Personality.gd")
-const Emotion = preload("res://scripts/entities/Emotion.gd")
-const Relationship = preload("res://scripts/entities/Relationship.gd")
-const SocialGraphManager = preload("res://scripts/systems/SocialGraphManager.gd")
-const BehaviorSystem = preload("res://scripts/systems/BehaviorSystem.gd")
-const RelationshipComponent = preload("res://scripts/entities/RelationshipComponent.gd")
-
 @export var npc_id: int = -1
 @export var npc_name: String = ""
 @export var personality: Personality
@@ -17,7 +10,10 @@ const RelationshipComponent = preload("res://scripts/entities/RelationshipCompon
 @onready var sprite: Sprite2D = get_node_or_null("Sprite2D")
 @onready var relationship_component: RelationshipComponent = _ensure_relationship_component()
 
-var current_state: String = "idle"
+# State machine: store a Resource-based state (NPCState) instance
+@export var default_state: Resource
+var current_state = null
+var state_elapsed: float = 0.0
 var current_emotion: Emotion
 var current_position: Vector2 = Vector2.ZERO
 
@@ -33,10 +29,30 @@ func _ready() -> void:
 	if social_graph_manager:
 		relationship_component.set_graph_manager(social_graph_manager)
 	update_relationships()
+	# set default state: prefer assigned Resource, otherwise idle
+	if default_state:
+		set_state(default_state)
+	else:
+		set_state_by_name("idle")
 
 # Maintains a cached copy of the position for systems that poll less frequently.
 func _physics_process(_delta: float) -> void:
 	current_position = global_position
+	# Delegate to current state
+	if current_state and current_state.has_method("physics_process"):
+		current_state.physics_process(self, _delta)
+		# track how long we've been in this state
+		state_elapsed += _delta
+		# allow state to suggest next state
+		if current_state.has_method("evaluate"):
+			var suggestion = current_state.evaluate(self)
+			if suggestion and suggestion != current_state:
+				try_set_state(suggestion)
+			elif suggestion == null and behavior_system:
+				# Pull: ask BehaviorSystem for next state suggestion
+				var next_state = behavior_system.choose_state_for(self)
+				if next_state:
+					try_set_state(next_state)
 
 # Handles a direct interaction with another NPC and forwards it to coordinating systems.
 func interact_with(other_npc: NPC) -> void:
@@ -55,13 +71,9 @@ func update_relationships() -> void:
 
 # Requests the BehaviorSystem to determine the next action, storing the resulting state for later use.
 func choose_action() -> String:
-	if behavior_system and behavior_system.has_method("choose_action_for"):
-		current_state = behavior_system.choose_action_for(self)
-	elif behavior_system and behavior_system.has_method("suggest_action_for"):
-		current_state = behavior_system.suggest_action_for(self)
-	else:
-		current_state = "idle"
-	return current_state
+	if behavior_system:
+		return behavior_system.choose_action_for(self)
+	return "idle"
 
 # Allows external systems to inject dependencies after the node is instantiated.
 func set_systems(graph_manager: SocialGraphManager, behavior: BehaviorSystem) -> void:
@@ -111,3 +123,62 @@ func get_relationship_snapshot() -> Dictionary:
 # Provides the active relationship component instance.
 func get_relationship_component() -> RelationshipComponent:
 	return relationship_component
+
+
+# Set state by passing a Resource instance or a pre-initialized state.
+func set_state(new_state: Resource) -> void:
+	if not new_state:
+		return
+	var instance = new_state
+	# Duplicate Resource to avoid shared mutable state between NPCs
+	if instance is Resource:
+		instance = new_state.duplicate(true)
+	if current_state and current_state.has_method("exit"):
+		current_state.exit(self)
+	current_state = instance
+	if current_state and current_state.has_method("enter"):
+		current_state.enter(self)
+	# reset elapsed time for cooldowns
+	state_elapsed = 0.0
+
+func try_set_state(new_state: Resource, force: bool = false) -> void:
+	if not new_state:
+		return
+	# prepare instance
+	var instance = new_state
+	if instance is Resource:
+		instance = new_state.duplicate(true)
+	# determine priorities
+	var new_prio: int = 0
+	if instance and instance.has_property("priority"):
+		new_prio = int(instance.priority)
+	var cur_prio: int = 0
+	if current_state and current_state.has_property("priority"):
+		cur_prio = int(current_state.priority)
+	# respect priority unless forced
+	if current_state and not force:
+		if new_prio < cur_prio:
+			return
+		# check min_duration if present
+		if current_state.has_property("min_duration"):
+			var elapsed: float = state_elapsed
+			var min_d: float = float(current_state.min_duration)
+			if elapsed < min_d:
+				return
+	# apply state
+	set_state(instance)
+
+func set_state_by_name(state_name: String) -> void:
+	match state_name:
+		"idle":
+			var s = preload("res://scripts/states/IdleState.gd").new()
+			set_state(s)
+		"walk":
+			var s = preload("res://scripts/states/WalkState.gd").new()
+			set_state(s)
+		"interact":
+			var s = preload("res://scripts/states/InteractState.gd").new()
+			set_state(s)
+		_: # fallback
+			var s = preload("res://scripts/states/IdleState.gd").new()
+			set_state(s)

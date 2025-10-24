@@ -1,9 +1,6 @@
 class_name RelationshipComponent
 extends Node
 
-const Relationship = preload("res://scripts/entities/Relationship.gd")
-const SocialGraphManager = preload("res://scripts/systems/SocialGraphManager.gd")
-
 signal relationship_broken(partner_id)
 
 @export var owner_id: int = -1
