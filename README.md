@@ -1,56 +1,93 @@
 # Medieval Social Simulator (Godot 4.x)
 
-## Resumen
-- Simulación top-down centrada en dinámicas sociales entre NPCs en una aldea medieval.
-- Relaciones entre NPCs se modelan como aristas ponderadas en un grafo social dinámico. El grafo mantiene un registro explícito de nodos y admite referencias a objetos `NPC` en tiempo de ejecución así como claves por `npc_id` (ints).
+## Overview
+- Small-scale top-down sandbox focused on emergent social dynamics between pixel-art NPCs in a medieval village.
+- NPC relationships are modeled as weighted edges in a dynamic social graph. The graph maintains an explicit node registry and supports using either NPC objects (with npc_id) or integer ids as keys.
 
-## Requisitos
+## Requirements
 - Godot Engine 4.5.
 
-## Estado actual del grafo y comportamiento clave
-- Implementación del grafo: `scripts/utils/Graph.gd` mantiene nodos (con metadatos) y una matriz de adyacencia; acepta claves por objeto (`NPC`) o por `npc_id`.
-- Recursos auxiliares: `scripts/utils/Vertex.gd` y `scripts/utils/Edge.gd` están disponibles para modelar metadatos de vértices y aristas ponderadas.
-- `SocialGraphManager` (`scripts/systems/SocialGraphManager.gd`) actúa como fachada/gestor del grafo en runtime. Está diseñado para trabajar con objetos `NPC` directamente y ofrece:
-  - `register_interaction(a, b)`: hook que actualiza o crea la afinidad entre `a` y `b` (usa valores devueltos por `_evaluate_interaction_delta` en los NPCs si están disponibles).
-  - `add_connection`, `remove_connection`, `get_relationships_for`: métodos compatibles con los consumidores del sistema (`RelationshipComponent`, `BehaviorSystem`, etc.).
-  - Señal `interaction_registered` para observadores UI/analytics.
+## Getting Started
+1. Open Godot 4.5 and import the project by selecting the root directory that contains `project.godot`.
+2. The startup scene is `scenes/main/Main.tscn`.
+3. Run the project (F5). Current content is minimal; focus is on validating social graph dynamics and basic NPC state flow.
 
-Este diseño permite que sistemas y UI trabajen con referencias a objetos en tiempo de ejecución (más convenientes para visualización y metadatos) mientras mantiene compatibilidad con APIs que usan ids numéricos.
+## Project Layout
+- `scenes/` – Godot scenes grouped by domain.
+  - `main/` – Entry scenes (`Main.tscn`, `Camera2D.tscn`).
+  - `world/` – World container and tile scripts/scenes.
+  - `npcs/` – NPC scene and visuals (`NPC.tscn`, `NPCSprite.tscn`, emotion icon scene).
+  - `ui/` – HUD, Graph Visualizer, and Log Panel scenes (currently placeholders).
+- `scripts/`
+  - `core/` – Orchestration stubs (`GameManager.gd`, `TimeManager.gd`, `EventSystem.gd`).
+  - `entities/` – NPC-focused scripts (`NPC.gd`, `RelationshipComponent.gd`, Resource definitions).
+  - `systems/` – Simulation subsystems (`SocialGraphManager.gd`, `BehaviorSystem.gd`).
+  - `states/` – Resource-based NPC states (`IdleState.gd`, `WalkState.gd`, `InteractState.gd`).
+  - `ui/` – Future HUD/graph/log controllers.
+  - `utils/` – Generic helpers (`Graph.gd`, `GraphAlgorithms.gd`, `Logger.gd`, `MathUtils.gd`, `Vertex.gd`, `Edge.gd`).
 
-## Estructura del proyecto (relevante)
-- `scenes/` – escenas del juego (entrada, mundo, NPCs, UI).
-- `scripts/core/` – orquestación (GameManager, TimeManager, EventSystem).
-- `scripts/entities/` – `NPC.gd`, `RelationshipComponent.gd`, recursos `Personality`, `Emotion`, `Relationship`.
-- `scripts/systems/` – `SocialGraphManager.gd`, `BehaviorSystem.gd`, etc.
-- `scripts/utils/` – utilidades: `Graph.gd`, `GraphAlgorithms.gd` (placeholder para análisis), `Vertex.gd`, `Edge.gd`.
+## Core Systems (current state)
+- SocialGraphManager (`scripts/systems/SocialGraphManager.gd`)
+  - Inherits `Graph` and is the runtime façade for social relations.
+  - Maintains an explicit node registry and a bidirectional adjacency map.
+  - Strict key policy: accepts either integer `npc_id` or NPC objects exposing `npc_id`.
+  - Provides `add_connection`, `remove_connection`, `get_relationships_for`, and a central `register_interaction(a, b)` hook that computes an affinity delta (leveraging `NPC._evaluate_interaction_delta` when available) and updates the edge weight. Emits `interaction_registered` for observers.
+  - `get_relationships_for` returns a dictionary keyed by `npc_id` to interoperate cleanly with components that expect ids.
+- Graph (`scripts/utils/Graph.gd`)
+  - Reusable graph with explicit nodes and weighted, undirected edges.
+  - API: `add_node`, `ensure_node`, `remove_node`, `add_connection`, `remove_connection`, `get_edge`, `get_edges`, `get_relationships_for`.
+  - Returns id-keyed neighbor maps when possible; meta per node can be stored by callers as needed (e.g., name, position, runtime refs).
+- RelationshipComponent (`scripts/entities/RelationshipComponent.gd`)
+  - Child node on each NPC. Owns runtime `Relationship` instances, synchronizes with `SocialGraphManager`, and exposes helpers: `add_relationship`, `update_affinity`, `break_relationship`, `get_relationship`.
+  - Uses `owner_id` and partner ids for storage. Emits `relationship_broken` when crossing `break_threshold`.
+  - Reads from the graph via `get_relationships_for(owner_id)` and mirrors changes locally.
+- BehaviorSystem (`scripts/systems/BehaviorSystem.gd`)
+  - Scores candidate actions from relationship affinities, current emotion intensity, and optional personality modifiers.
+  - Can suggest state transitions and react to `register_interaction` events.
+- NPC State Machine (`scripts/entities/NPC.gd` + `scripts/states/`)
+  - NPCs hold a `Resource` state instance (derived from `NPCState`) and delegate `_physics_process` to the current state.
+  - `set_systems(graph_manager, behavior)` injects subsystems and registers the NPC as a node in the social graph with basic metadata.
+  - `interact_with(other_npc)` notifies systems and applies an affinity delta derived from emotion and relationship context.
 
-## Cómo usar el grafo en runtime
-1. Añade una instancia de `SocialGraphManager` en la escena principal (o regístrala como singleton/autoload si prefieres).
-2. Cuando instancies un `NPC`, llama `npc.set_systems(graph_manager, behavior_system)` para inyectar dependencias — esto registrará el nodo (objeto) en el grafo.
-3. Para registrar interacciones, los NPCs llaman `interact_with(other_npc)`; internamente `SocialGraphManager.register_interaction(self, other_npc)` actualizará las afinidades.
-4. `RelationshipComponent` mantiene un cache local y sincroniza con `SocialGraphManager` mediante `get_relationships_for(npc)` y `add_connection`/`remove_connection`.
+## NPC Composition
+- `NPC.gd` (CharacterBody2D) exports `Personality`, `Emotion`, and `Relationship` resources; instantiates a `RelationshipComponent` at runtime.
+- Helper accessors (`get_relationship_snapshot`, `get_relationship_component`) simplify subsystem queries.
+- `_evaluate_interaction_delta(other)` provides a tunable heuristic for affinity changes per interaction.
 
-## Notas para desarrolladores
-- Vertex.meta: en `scripts/utils/Vertex.gd` el campo `meta` es un `Dictionary` para pares clave→valor (ej. `name`, `pos`, `ref`). Es útil en tiempo de ejecución para enlazar `ref` a nodos, pero evita serializar referencias a `Node` directamente si planeas guardar el grafo en disco — en su lugar guarda `npc_id` o `NodePath`.
-- Compatibilidad: `Graph` acepta tanto objetos como ids. Internamente mantiene `id_to_ref` para mapear `npc_id` → objeto registrado. `get_relationships_for` devuelve claves por id cuando el vecino tiene `npc_id`.
-- Señales: `SocialGraphManager.interaction_registered` se emite con los parámetros (a_key, b_key, affinity). `a_key`/`b_key` pueden ser objetos; si prefieres recibir id explícitos, se puede ampliar la señal para emitir `npc_id` y `ref`.
+## Working With States
+- Base class `NPCState` is a `Resource` with overridable `enter`, `exit`, `physics_process`, and `evaluate` methods.
+- To add a new state:
+  1) Create a script extending `NPCState` under `scripts/states/`.
+  2) Implement lifecycle methods and export any tunable parameters.
+  3) Register via `NPC.set_state_by_name` or inject dynamically through `BehaviorSystem`.
 
-## Prueba rápida (sanity check)
-1. Abrir el proyecto en Godot.
-2. Asegúrate de que la escena principal contiene `SocialGraphManager` o regístralo como autoload.
-3. Crea/instancia 2–3 NPCs en la escena y en su setup llama `set_systems(graph_manager, behavior_system)`.
-4. En el inspector o desde un script llamador, ejecuta `npc_a.interact_with(npc_b)` varias veces.
-5. Inspecciona `SocialGraphManager.adjacency` en tiempo de ejecución: deberías ver aristas entre los objetos (o sus ids) con pesos de afinidad crecientes. También puedes llamar `relationship = npc_a.get_relationship_snapshot()` para comprobar la sincronización local.
+## Extending Personalities & Emotions
+- `Personality.gd` stores a `traits` dictionary usable by `BehaviorSystem` for scoring modifiers.
+- `Emotion.gd` holds `label` and `intensity`; NPCs duplicate it at runtime to avoid shared state.
+- `Relationship.gd` defines `affinity` and `partner_id`; resources can be used for authored defaults and serialization.
 
-## Siguientes pasos recomendados
-- Añadir utilidades de análisis en `scripts/utils/GraphAlgorithms.gd` (degree centrality, BFS/shortest path, detección de comunidades).
-- Implementar `GraphVisualizer` (`scripts/ui/GraphVisualizer.gd`) para renderizar la red en tiempo real.
-- Decidir si `RelationshipComponent` debe migrar a usar referencias a NPCs en vez de ids (mejor para runtime, más complejo para persistencia).
-- Añadir tests/escenas de integración que creen NPCs, simulen interacciones y validen invariantes del grafo.
+## Planned UI & Visualization
+- `scenes/ui/GraphVisualizer.tscn` and `scripts/ui/GraphVisualizer.gd` will render the social graph in real time (work-in-progress).
+- `HUD` and `LogPanel` scenes are placeholders for simulation metrics and event history.
 
-## Contribuyendo
-1. Crea una rama por feature.
-2. Mantén commits atómicos y documenta cambios complejos en comentarios y en este README si impactan la API.
-3. Abre el proyecto en Godot 4.5 y verifica que no hay errores en el editor al guardar scripts.
+## Coding Guidelines
+- Favor composition over inheritance for game entities.
+- Use `@export` for editor-friendly tuning and `@onready` for child lookups.
+- Keep scripts concise and documented around complex logic blocks.
+- Place new graph algorithms in `scripts/utils/GraphAlgorithms.gd` to keep systems lean.
+
+## Roadmap / TODO
+- Build real-time graph visualization and HUD metrics (e.g., most social NPCs, simple community detection).
+- Flesh out `GameManager`, `TimeManager`, and `EventSystem` for daily cycles and logging.
+- Implement richer interaction outcomes that feed into `RelationshipComponent.update_affinity`.
+- Populate the world (tiles, simple pathfinding) and NPC spawn logic.
+- Add saving/loading of social graph state and configurable simulation parameters.
+- Integrate tests or debug scenes to validate behavior transitions and graph dynamics.
+
+## Contributing Workflow
+1. Create a feature branch; keep commits scoped to one system when possible.
+2. Update or add scenes/scripts using Godot 4.x; ensure the project still opens without warnings.
+3. Run the simulation (F5) to verify there are no runtime errors or graph inconsistencies.
+4. Document noteworthy systems or tuning knobs inline or here.
 
 Happy simulating!
