@@ -1,41 +1,58 @@
 class_name SocialGraphManager
-extends Node
+extends "res://scripts/utils/Graph.gd"
 
-var adjacency: Dictionary = {}
+# Optionally emit when interactions are registered for analytics/UI hooks.
+signal interaction_registered(a_id, b_id, new_affinity)
 
-# Registers high-level interaction events; can be expanded for analytics or decay logic.
-func register_interaction(_npc_a, _npc_b) -> void:
+func _ready() -> void:
+	# ensure Graph node lifecycle continues to work
 	pass
 
-# Returns the neighbor dictionary for a given NPC id.
-func get_relationships_for(npc_id: int) -> Dictionary:
-	if not adjacency.has(npc_id):
-		return {}
-	return adjacency[npc_id].duplicate()
+# Registers a high-level interaction between two NPCs (or ids).
+# This implementation tries to compute a small affinity delta using NPC
+# helpers if available and updates the bidirectional affinity accordingly.
+func register_interaction(_npc_a, _npc_b) -> void:
+	var a_meta: Dictionary = {}
+	var b_meta: Dictionary = {}
 
-# Adds or updates a bidirectional connection; negative weights remove the edge.
-func add_connection(a_id: int, b_id: int, affinity: float) -> void:
-	if a_id == b_id:
+	var ka = _key_for(_npc_a)
+	var kb = _key_for(_npc_b)
+	if ka == null or kb == null or ka == kb:
 		return
-	if affinity < 0.0:
-		remove_connection(a_id, b_id)
-		return
-	_adj_insert(a_id, b_id, affinity)
-	_adj_insert(b_id, a_id, affinity)
 
-# Removes a bidirectional connection from the graph.
-func remove_connection(a_id: int, b_id: int) -> void:
-	if adjacency.has(a_id):
-		adjacency[a_id].erase(b_id)
-		if adjacency[a_id].is_empty():
-			adjacency.erase(a_id)
-	if adjacency.has(b_id):
-		adjacency[b_id].erase(a_id)
-		if adjacency[b_id].is_empty():
-			adjacency.erase(b_id)
+	# If objects provided, collect meta
+	if typeof(_npc_a) == TYPE_OBJECT and _npc_a != null:
+		if _npc_a.has_variable("npc_name"):
+			a_meta["name"] = _npc_a.npc_name
+		if _npc_a.has_variable("current_position"):
+			a_meta["pos"] = _npc_a.current_position
+		a_meta["ref"] = _npc_a
 
-# Internal helper to insert an edge endpoint.
-func _adj_insert(source_id: int, target_id: int, affinity: float) -> void:
-	if not adjacency.has(source_id):
-		adjacency[source_id] = {}
-	adjacency[source_id][target_id] = affinity
+	if typeof(_npc_b) == TYPE_OBJECT and _npc_b != null:
+		if _npc_b.has_variable("npc_name"):
+			b_meta["name"] = _npc_b.npc_name
+		if _npc_b.has_variable("current_position"):
+			b_meta["pos"] = _npc_b.current_position
+		b_meta["ref"] = _npc_b
+
+	ensure_node(ka, a_meta)
+	ensure_node(kb, b_meta)
+
+	# compute affinity delta using NPC helpers when present
+	var delta_a: float = 0.05
+	var delta_b: float = 0.05
+	if typeof(_npc_a) == TYPE_OBJECT and _npc_a != null and _npc_a.has_method("_evaluate_interaction_delta"):
+		delta_a = float(_npc_a._evaluate_interaction_delta(_npc_b))
+	if typeof(_npc_b) == TYPE_OBJECT and _npc_b != null and _npc_b.has_method("_evaluate_interaction_delta"):
+		delta_b = float(_npc_b._evaluate_interaction_delta(_npc_a))
+
+	# current affinity (0 if none)
+	var existing_val = get_edge(ka, kb)
+	var existing: float = 0.0
+	if existing_val != null:
+		existing = float(existing_val)
+
+	var new_affinity: float = existing + ((delta_a + delta_b) / 2.0)
+
+	add_connection(ka, kb, new_affinity)
+	emit_signal("interaction_registered", ka, kb, new_affinity)

@@ -20,7 +20,6 @@ var current_position: Vector2 = Vector2.ZERO
 var social_graph_manager: SocialGraphManager
 var behavior_system: BehaviorSystem
 
-# Initializes runtime state and ensures component references are ready for use.
 func _ready() -> void:
 	current_position = global_position
 	current_emotion = _instantiate_emotion()
@@ -83,6 +82,11 @@ func set_systems(graph_manager: SocialGraphManager, behavior: BehaviorSystem) ->
 		relationship_component.owner_id = npc_id
 		relationship_component.set_graph_manager(graph_manager)
 		relationship_component.refresh_from_graph()
+
+	# Register this NPC object in the graph manager so object-based lookups work.
+	if social_graph_manager:
+		var meta := {"name": npc_name, "pos": current_position, "ref": self}
+		social_graph_manager.ensure_node(self, meta)
 
 # Registers or updates a specific relationship entry within the local cache.
 func set_relationship(target_id: int, relationship: Relationship) -> void:

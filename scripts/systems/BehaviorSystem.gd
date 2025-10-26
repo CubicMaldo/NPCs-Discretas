@@ -63,8 +63,7 @@ func choose_action_for(npc: NPC) -> String:
 
 	if debug_mode:
 		print("BehaviorSystem: npc=", npc, "scores: interact=", interact_score, "walk=", walk_score, "ignore=", ignore_score, "chosen=", action)
-
-	emit_signal("action_chosen", npc, action)
+	action_chosen.emit(npc, action)
 	return action
 
 # Hook for other systems to listen for completed interactions.
