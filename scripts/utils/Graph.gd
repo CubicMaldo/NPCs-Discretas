@@ -31,21 +31,22 @@ var vertices: Dictionary[Variant, Vertex] = {}
 ## Argumentos:
 ## - `key`: Clave del nodo (no puede ser `null`).
 ## - `meta`: Diccionario opcional con metadatos.
-func add_node(key, meta: Dictionary = {}) -> void:
+func add_node(key, meta: Dictionary = {}) -> Vertex:
 	if key == null:
 		push_error("Graph.add_node: key cannot be null")
-		return
+		return null
 
 	var vertex = vertices.get(key)
 	if vertex:
 		if meta:
 			for mk in meta:
 				vertex.meta[mk] = meta[mk]
-		return
+		return vertex
 	
 	vertex = Vertex.new(key, _id_as_int(key), meta)
 	vertices[key] = vertex
 	emit_signal("node_added", key)
+	return vertex
 
 
 ## Garantiza que un nodo exista, creando o actualizando su metadata.
@@ -53,13 +54,15 @@ func add_node(key, meta: Dictionary = {}) -> void:
 ## Argumentos:
 ## - `key`: Identificador del nodo.
 ## - `meta`: Diccionario opcional con metadatos.
-func ensure_node(key, meta: Dictionary = {}) -> void:
+func ensure_node(key, meta: Dictionary = {}) -> Vertex:
 	if not vertices.has(key):
-		add_node(key, meta)
+		return add_node(key, meta)
 	elif meta:
 		var v = vertices[key]
 		for mk in meta:
 			v.meta[mk] = meta[mk]
+		return v
+	return vertices.get(key)
 
 
 ## Elimina un nodo y todas sus conexiones.
@@ -74,6 +77,33 @@ func remove_node(key) -> void:
 	v.dispose()
 	vertices.erase(key)
 	emit_signal("node_removed", key)
+
+
+## Cambia la clave utilizada para un vértice existente.
+## Devuelve `true` si la operación tuvo éxito.
+func rekey_vertex(old_key, new_key) -> bool:
+	if old_key == new_key:
+		return true
+	if new_key == null:
+		push_error("Graph.rekey_vertex: new_key cannot be null")
+		return false
+	var vertex: Vertex = vertices.get(old_key)
+	if vertex == null:
+		push_warning("Graph.rekey_vertex: old_key %s not found" % [str(old_key)])
+		return false
+	if vertices.has(new_key):
+		push_warning("Graph.rekey_vertex: new_key %s already exists" % [str(new_key)])
+		return false
+	vertices.erase(old_key)
+	vertices[new_key] = vertex
+	vertex.key = new_key
+	for neighbor_key in vertex.edges.keys():
+		var neighbor_vertex: Vertex = vertices.get(neighbor_key)
+		if neighbor_vertex and neighbor_vertex.edges.has(old_key):
+			var edge: Edge = neighbor_vertex.edges[old_key]
+			neighbor_vertex.edges.erase(old_key)
+			neighbor_vertex.edges[new_key] = edge
+	return true
 
 
 ## Devuelve `true` si el nodo existe en el grafo.

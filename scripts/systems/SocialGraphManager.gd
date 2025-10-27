@@ -1,67 +1,133 @@
 class_name SocialGraphManager
 extends Node
 
-const SocialGraph = preload("res://scripts/systems/SocialGraph.gd")
-var social_graph : SocialGraph
+const SocialGraphClass = preload("res://scripts/systems/SocialGraph.gd")
 
-# Optionally emit when interactions are registered for analytics/UI hooks.
-signal interaction_registered(a_id, b_id, new_affinity)
+## Grafo social interno que maneja todas las relaciones.
+var social_graph: SocialGraph
+
+## Señales espejo del grafo social para que otros sistemas se conecten aquí.
+signal interaction_registered(a_key, b_key, new_affinity)
+signal interaction_registered_ids(a_id, b_id, new_affinity)
 
 func _ready() -> void:
-	social_graph = SocialGraph.new()
+	social_graph = SocialGraphClass.new()
+	social_graph.interaction_registered.connect(_on_interaction_registered)
+	social_graph.interaction_registered_ids.connect(_on_interaction_registered_ids)
 
-# This implementation tries to compute a small affinity delta using NPC
-func register_interaction(_npc_a, _npc_b) -> void:
-	var a_meta: Dictionary = {}
-	var b_meta: Dictionary = {}
+## Asegura que un NPC (objeto o id) exista en el grafo, propagando metadata opcional.
+func ensure_npc(npc_or_id, meta: Dictionary = {}) -> void:
+	social_graph.ensure_npc(npc_or_id, meta)
 
-	var ka = social_graph._key_for(_npc_a)
-	var kb = social_graph._key_for(_npc_b)
-	if ka == null or kb == null or ka == kb:
-		return
+## Registra una interacción delegando en el grafo social (objeto-first, ids opcionales).
+func register_interaction(a, b, base_delta := 0.0, options: Dictionary = {}) -> void:
+	social_graph.register_interaction(a, b, base_delta, options)
 
-	# If objects provided, collect meta
-	if _npc_a is NPC:
-		a_meta["name"] = _npc_a.npc_name
-		a_meta["pos"] = _npc_a.current_position
-		a_meta["ref"] = _npc_a
+## Conecta dos NPCs/ids con un peso determinado.
+func add_connection(a, b, affinity: float, meta_a := {}, meta_b := {}) -> void:
+	social_graph.connect_npcs(a, b, affinity, meta_a, meta_b)
 
-	if _npc_b is NPC:
-		b_meta["name"] = _npc_b.npc_name
-		b_meta["pos"] = _npc_b.current_position
-		b_meta["ref"] = _npc_b
+## Elimina la relación entre dos actores si existe.
+func remove_connection(a, b) -> void:
+	social_graph.break_relationship(a, b)
 
-	social_graph.ensure_node(ka, a_meta)
-	social_graph.ensure_node(kb, b_meta)
+## Elimina un NPC o id del grafo.
+func remove_npc(npc_or_id) -> void:
+	social_graph.remove_npc(npc_or_id)
 
-	# compute affinity delta using NPC helpers when present
-	var delta_a: float = 0.05
-	var delta_b: float = 0.05
-	if _npc_a is NPC:
-		delta_a = float(_npc_a._evaluate_interaction_delta(_npc_b))
-	if _npc_b is NPC:
-		delta_b = float(_npc_b._evaluate_interaction_delta(_npc_a))
+## Establece explícitamente la afinidad.
+func set_affinity(a, b, affinity: float) -> void:
+	social_graph.set_affinity(a, b, affinity)
 
-	# current affinity (0 if none)
-	var existing_val = social_graph.get_edge(ka, kb)
-	var existing: float = 0.0
-	if existing_val != null:
-		existing = float(existing_val)
+## Comprueba si la relación está por encima de un umbral.
+func has_relationship_at_least(a, b, threshold: float) -> bool:
+	return social_graph.has_relationship_at_least(a, b, threshold)
 
-	var new_affinity: float = existing + ((delta_a + delta_b) / 2.0)
+## Rompe la relación si cae por debajo del umbral.
+func break_if_below(a, b, threshold: float) -> bool:
+	return social_graph.break_if_below(a, b, threshold)
 
-	social_graph.add_connection(ka, kb, new_affinity)
+## Devuelve relaciones usando las claves almacenadas (objetos o ids).
+func get_relationships_for(key) -> Dictionary:
+	return social_graph.get_relationships_for(key)
 
-	interaction_registered.emit(ka, kb, new_affinity)
+## Variante que intenta mapear a ids donde sea posible.
+func get_relationships_for_ids(key) -> Dictionary:
+	return social_graph.get_relationships_for_ids(key)
 
+## Helpers de consultas.
+func get_top_relations(key, top_n := 3) -> Array:
+	return social_graph.get_top_relations(key, top_n)
 
-func get_relationships_for(npc_or_id) -> Dictionary:
-	# Manager-level convenience: returns neighbor map keyed by npc_id when possible.
-	var raw: Dictionary = social_graph.get_neighbor_weights(npc_or_id)
-	var out: Dictionary = {}
-	for neighbor in raw.keys():
-		var out_key = neighbor
-		if neighbor is NPC:
-			out_key = int(neighbor.npc_id)
-		out[out_key] = raw[neighbor]
-	return out
+func get_friends_above(key, threshold: float) -> Array:
+	return social_graph.get_friends_above(key, threshold)
+
+## Depuración rápida (imprime estado del grafo).
+func debug_dump() -> void:
+	social_graph.debug_print()
+
+## Limpia NPCs inválidos y devuelve el total removido.
+func cleanup_invalid_nodes() -> int:
+	return social_graph.cleanup_invalid_nodes()
+
+## Valida referencias internas de NPCs.
+func validate_npc_references() -> Array[String]:
+	return social_graph.validate_npc_references()
+
+## Aplica decaimiento temporal a las relaciones activas.
+func apply_decay(delta_seconds: float) -> Dictionary:
+	return social_graph.apply_decay(delta_seconds)
+
+## Registra un NPC cargado desde disco para atar el vértice pendiente.
+func register_loaded_npc(npc: NPC, meta: Dictionary = {}) -> void:
+	social_graph.register_loaded_npc(npc, meta)
+
+## Recupera un NPC por su id si sigue activo.
+func get_npc_by_id(npc_id: int) -> NPC:
+	return social_graph.get_npc_by_id(npc_id)
+
+## Devuelve el vértice asociado a un NPC concreto.
+func get_vertex_by_npc(npc: NPC) -> Vertex:
+	return social_graph.get_vertex_by_npc(npc)
+
+## Serializa el grafo.
+func serialize_graph() -> Dictionary:
+	return social_graph.serialize()
+
+## Reconstruye el grafo desde datos serializados.
+func deserialize_graph(data: Dictionary) -> bool:
+	return social_graph.deserialize(data)
+
+## Guarda en disco el grafo social.
+func save_to_file(path: String, compressed := true) -> Error:
+	return social_graph.save_to_file(path, compressed)
+
+## Carga el grafo desde disco.
+func load_from_file(path: String) -> Error:
+	return social_graph.load_from_file(path)
+
+## Limpia completamente el grafo social.
+func clear_graph() -> void:
+	social_graph.clear()
+
+## Ejecuta las validaciones de integridad sobre el grafo.
+func validate_graph() -> Dictionary:
+	return social_graph.validate_graph()
+
+## Intenta reparar inconsistencias detectadas.
+func repair_graph() -> Dictionary:
+	return social_graph.repair_graph()
+
+## Ejecuta un stress test sobre un grafo temporal.
+func stress_test(num_nodes: int, num_edges: int) -> Dictionary:
+	return social_graph.stress_test(num_nodes, num_edges)
+
+## Lanza pruebas rápidas para casos límite.
+func test_edge_cases() -> Array[String]:
+	return social_graph.test_edge_cases()
+
+func _on_interaction_registered(a_key, b_key, _delta, new_weight) -> void:
+	interaction_registered.emit(a_key, b_key, new_weight)
+
+func _on_interaction_registered_ids(a_id, b_id, _delta, new_weight) -> void:
+	interaction_registered_ids.emit(a_id, b_id, new_weight)

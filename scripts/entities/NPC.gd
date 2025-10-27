@@ -86,7 +86,7 @@ func set_systems(graph_manager: SocialGraphManager, behavior: BehaviorSystem) ->
 	# Register this NPC object in the graph manager so object-based lookups work.
 	if social_graph_manager:
 		var meta := {"name": npc_name, "pos": current_position, "ref": self}
-		social_graph_manager.ensure_node(self, meta)
+		social_graph_manager.ensure_npc(self, meta)
 
 # Registers or updates a specific relationship entry within the local cache.
 func set_relationship(target_id: int, relationship: Relationship) -> void:
