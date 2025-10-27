@@ -887,9 +887,11 @@ func deserialize(data: Dictionary) -> bool:
 
 
 ## Guarda el grafo en disco en formato JSON opcionalmente comprimido.
+## Los archivos sin comprimir se formatean con indentación para mejor legibilidad.
 func save_to_file(path: String, compressed := true) -> Error:
 	var data := serialize()
-	var json := JSON.stringify(data)
+	# Usar indentación solo para archivos no comprimidos (mejor legibilidad)
+	var json := JSON.stringify(data, "\t") if not compressed else JSON.stringify(data)
 	var file: FileAccess
 	if compressed:
 		file = FileAccess.open_compressed(path, FileAccess.WRITE, FileAccess.COMPRESSION_GZIP)
@@ -903,21 +905,37 @@ func save_to_file(path: String, compressed := true) -> Error:
 	return OK
 
 
-## Carga el grafo desde disco, detectando automáticamente compresión.
+## Carga el grafo desde disco, detectando automáticamente compresión por extensión.
 func load_from_file(path: String) -> Error:
-	var file := FileAccess.open(path, FileAccess.READ)
-	var err := FileAccess.get_open_error()
+	var file: FileAccess
 	var text := ""
-	if err == OK and file:
-		text = file.get_as_text()
-		file.close()
-	else:
+	var err: Error
+	
+	# Detectar compresión por extensión del archivo
+	var is_compressed := path.ends_with(".gz") or path.ends_with(".gzip")
+	
+	if is_compressed:
 		file = FileAccess.open_compressed(path, FileAccess.READ, FileAccess.COMPRESSION_GZIP)
 		err = FileAccess.get_open_error()
 		if err != OK or file == null:
 			return err
 		text = file.get_as_text()
 		file.close()
+	else:
+		file = FileAccess.open(path, FileAccess.READ)
+		err = FileAccess.get_open_error()
+		if err != OK or file == null:
+			# Intentar como comprimido si falla la lectura normal
+			file = FileAccess.open_compressed(path, FileAccess.READ, FileAccess.COMPRESSION_GZIP)
+			err = FileAccess.get_open_error()
+			if err != OK or file == null:
+				return err
+			text = file.get_as_text()
+			file.close()
+		else:
+			text = file.get_as_text()
+			file.close()
+	
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return ERR_PARSE_ERROR
