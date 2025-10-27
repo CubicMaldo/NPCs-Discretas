@@ -27,26 +27,29 @@
   - `utils/` – Generic helpers (`Graph.gd`, `GraphAlgorithms.gd`, `Logger.gd`, `MathUtils.gd`, `Vertex.gd`, `Edge.gd`).
 
 ## Core Systems (current state)
+
 - SocialGraphManager (`scripts/systems/SocialGraphManager.gd`)
-  - Inherits `Graph` and is the runtime façade for social relations.
-  - Maintains an explicit node registry and a bidirectional adjacency map.
-  - Strict key policy: accepts either integer `npc_id` or NPC objects exposing `npc_id`.
-  - Provides `add_connection`, `remove_connection`, `get_relationships_for`, and a central `register_interaction(a, b)` hook that computes an affinity delta (leveraging `NPC._evaluate_interaction_delta` when available) and updates the edge weight. Emits `interaction_registered` for observers.
-  - `get_relationships_for` returns a dictionary keyed by `npc_id` to interoperate cleanly with components that expect ids.
+  - Runtime façade that composes the reusable `Graph` data structure (preloads/instantiates `Graph`).
+  - Maintains the node registry and connects NPCs via the graph API. Accepts integer `npc_id` or NPC objects where appropriate and normalizes keys when exposing id-keyed results.
+  - Exposes helpers to add/remove connections and a central `register_interaction(a, b)` hook that computes an affinity delta (delegating to NPC heuristics when available) and updates edge weights. Emits domain signals for observers.
+
 - Graph (`scripts/utils/Graph.gd`)
-  - Reusable graph with explicit nodes and weighted, undirected edges.
-  - API: `add_node`, `ensure_node`, `remove_node`, `add_connection`, `remove_connection`, `get_edge`, `get_edges`, `get_relationships_for`.
-  - Returns id-keyed neighbor maps when possible; meta per node can be stored by callers as needed (e.g., name, position, runtime refs).
+  - Lightweight, domain-agnostic graph implemented as a RefCounted data class.
+  - Uses explicit `Vertex` and `Edge` objects (see `scripts/utils/Vertex.gd` and `scripts/utils/Edge.gd`). Adjacency is stored per-vertex (no global string edge keys); edge listing deduplicates with a stable comparator.
+  - Important API: `add_node`, `ensure_node`, `remove_node`, `add_connection`, `remove_connection`, `get_edge`, `get_edges`, `get_neighbor_weights`, `get_neighbors`, `get_degree`.
+  - `clear()` and `remove_node()` call `Vertex.dispose()` to break cyclic references and allow Godot to reclaim RefCounted objects.
+
 - RelationshipComponent (`scripts/entities/RelationshipComponent.gd`)
-  - Child node on each NPC. Owns runtime `Relationship` instances, synchronizes with `SocialGraphManager`, and exposes helpers: `add_relationship`, `update_affinity`, `break_relationship`, `get_relationship`.
-  - Uses `owner_id` and partner ids for storage. Emits `relationship_broken` when crossing `break_threshold`.
-  - Reads from the graph via `get_relationships_for(owner_id)` and mirrors changes locally.
+  - Per-NPC component that manages local relationship state and synchronizes with the `SocialGraphManager`.
+  - Stores relationships and mirrors graph changes; updated to interoperate with object references as keys where convenient while exposing id-keyed snapshots for systems that expect ids.
+
 - BehaviorSystem (`scripts/systems/BehaviorSystem.gd`)
-  - Scores candidate actions from relationship affinities, current emotion intensity, and optional personality modifiers.
-  - Can suggest state transitions and react to `register_interaction` events.
+  - Scores candidate actions using relationship affinities, emotions, and personality modifiers.
+  - Subscribes to interaction/register events and can propose state transitions.
+
 - NPC State Machine (`scripts/entities/NPC.gd` + `scripts/states/`)
-  - NPCs hold a `Resource` state instance (derived from `NPCState`) and delegate `_physics_process` to the current state.
-  - `set_systems(graph_manager, behavior)` injects subsystems and registers the NPC as a node in the social graph with basic metadata.
+  - NPCs hold a `Resource` state instance (derived from `NPCState`) and delegate physics processing to the active state.
+  - `set_systems(graph_manager, behavior)` injects subsystems and registers the NPC as a node in the social graph with metadata.
   - `interact_with(other_npc)` notifies systems and applies an affinity delta derived from emotion and relationship context.
 
 ## NPC Composition
