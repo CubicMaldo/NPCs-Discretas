@@ -62,6 +62,27 @@ func get_top_relations(key, top_n := 3) -> Array:
 func get_friends_above(key, threshold: float) -> Array:
 	return social_graph.get_friends_above(key, threshold)
 
+func get_cached_neighbors(key) -> Dictionary:
+	return social_graph.get_cached_neighbors(key)
+
+func get_cached_neighbors_ids(key) -> Dictionary:
+	return social_graph.get_cached_neighbors_ids(key)
+
+func get_cached_degree(key) -> int:
+	return social_graph.get_cached_degree(key)
+
+func get_cached_degree_ids(key) -> int:
+	return social_graph.get_cached_degree_ids(key)
+
+func get_shortest_path(a, b) -> Dictionary:
+	return social_graph.get_shortest_path(a, b)
+
+func get_mutual_connections(a, b, min_weight := 0.0) -> Dictionary:
+	return social_graph.get_mutual_connections(a, b, min_weight)
+
+func simulate_rumor(seed_actor, steps := 3, attenuation := 0.6, min_strength := 0.05, use_ids := true) -> Dictionary:
+	return social_graph.simulate_rumor(seed_actor, steps, attenuation, min_strength, use_ids)
+
 ## Depuración rápida (imprime estado del grafo).
 func debug_dump() -> void:
 	social_graph.debug_print()

@@ -31,6 +31,9 @@ var _npc_to_vertex: Dictionary = {}
 var _pending_vertices: Dictionary = {}
 ## NPCs con señal `tree_exiting` conectada para limpieza automática.
 var _connected_npcs: Dictionary = {}
+## Índices cacheados para consultas rápidas.
+var _adjacency_by_key: Dictionary = {}
+var _adjacency_by_id: Dictionary = {}
 
 
 ## Garantiza que un NPC quede registrado y monitorizado.
@@ -53,6 +56,7 @@ func _ensure_npc_object(npc: NPC, meta: Dictionary = {}) -> Vertex:
 	if vertex == null and npc_id != -1 and _pending_vertices.has(npc_id):
 		vertex = _pending_vertices[npc_id]
 		if super.rekey_vertex(npc_id, npc):
+			_rekey_cache_entry(npc_id, npc)
 			_pending_vertices.erase(npc_id)
 		else:
 			vertex = null
@@ -111,14 +115,19 @@ func _remove_vertex_for_key(key) -> bool:
 	var vertex: Vertex = get_vertex(key)
 	if vertex == null:
 		return false
+	var neighbor_keys: Array = vertex.get_neighbor_keys()
 	var npc_id := vertex.id
 	super.remove_node(key)
-	if key is Object:
-		var callable: Callable = _connected_npcs.get(key, Callable())
-		if callable and (key is Node) and (key as Node).tree_exiting.is_connected(callable):
-			(key as Node).tree_exiting.disconnect(callable)
-		_npc_to_vertex.erase(key)
-		_connected_npcs.erase(key)
+	_purge_vertex_indices(vertex, neighbor_keys)
+	if typeof(key) == TYPE_OBJECT:
+		var obj = key
+		var callable: Callable = _connected_npcs.get(obj, Callable())
+		if callable and is_instance_valid(obj) and obj is Node:
+			var node := obj as Node
+			if node.tree_exiting.is_connected(callable):
+				node.tree_exiting.disconnect(callable)
+		_npc_to_vertex.erase(obj)
+		_connected_npcs.erase(obj)
 	if npc_id != -1:
 		_npc_registry.erase(npc_id)
 		_pending_vertices.erase(npc_id)
@@ -147,6 +156,8 @@ func _to_id(entity_or_key):
 	if entity_or_key is NPC:
 		return int((entity_or_key as NPC).npc_id)
 	if entity_or_key is Object and entity_or_key:
+		if not is_instance_valid(entity_or_key):
+			return null
 		if entity_or_key.has_method("get"):
 			var nid = entity_or_key.get("npc_id")
 			if nid != null:
@@ -154,6 +165,189 @@ func _to_id(entity_or_key):
 		if entity_or_key.has_method("get_npc_id"):
 			return int(entity_or_key.get_npc_id())
 	return null
+
+
+func add_connection(a, b, affinity: float) -> void:
+	var existed := has_edge(a, b)
+	super.add_connection(a, b, affinity)
+	if has_edge(a, b):
+		var weight: float = float(get_edge(a, b))
+		_update_edge_indices(a, b, weight)
+	elif existed:
+		_remove_edge_indices(a, b)
+
+
+func remove_connection(a, b) -> void:
+	var existed := has_edge(a, b)
+	super.remove_connection(a, b)
+	if existed and not has_edge(a, b):
+		_remove_edge_indices(a, b)
+
+
+func _graph_key_from_input(input) -> Variant:
+	if input == null:
+		return null
+	if input is Vertex:
+		return (input as Vertex).key
+	if input is NPC:
+		return input
+	if typeof(input) == TYPE_INT:
+		if vertices.has(input):
+			return input
+		if _pending_vertices.has(int(input)):
+			return _pending_vertices[int(input)].key
+		var npc: NPC = get_npc_by_id(int(input))
+		if npc != null and is_instance_valid(npc):
+			return npc
+		return input
+	return input
+
+
+func _resolve_id_for_input(input, vertex: Vertex = null):
+	if vertex and vertex.id != -1:
+		return vertex.id
+	if typeof(input) == TYPE_INT:
+		return int(input)
+	if input is Vertex:
+		var v: Vertex = input as Vertex
+		if v.id != -1:
+			return v.id
+		return null
+	if input is NPC:
+		var npc := input as NPC
+		var npc_id := int(npc.npc_id)
+		if npc_id != -1:
+			return npc_id
+		return null
+	if input is Object:
+		if not is_instance_valid(input):
+			return null
+		var attached_vertex: Vertex = vertex
+		if attached_vertex == null:
+			attached_vertex = get_vertex(input)
+		if attached_vertex and attached_vertex.id != -1:
+			return attached_vertex.id
+		var inferred = _to_id(input)
+		if inferred != null and inferred != -1:
+			return inferred
+		return null
+	return null
+
+
+func _update_edge_indices(key_a, key_b, weight: float) -> void:
+	if weight <= 0.0:
+		_remove_edge_indices(key_a, key_b)
+		return
+	var vertex_a: Vertex = get_vertex(key_a)
+	var vertex_b: Vertex = get_vertex(key_b)
+	var actual_key_a = vertex_a.key if vertex_a else key_a
+	var actual_key_b = vertex_b.key if vertex_b else key_b
+	_update_bidirectional_cache(_adjacency_by_key, actual_key_a, actual_key_b, weight)
+	var id_a = _resolve_id_for_input(actual_key_a, vertex_a)
+	var id_b = _resolve_id_for_input(actual_key_b, vertex_b)
+	if id_a != null and id_b != null:
+		_update_bidirectional_cache(_adjacency_by_id, id_a, id_b, weight)
+
+
+func _remove_edge_indices(key_a, key_b) -> void:
+	var vertex_a: Vertex = get_vertex(key_a)
+	var vertex_b: Vertex = get_vertex(key_b)
+	var actual_key_a = vertex_a.key if vertex_a else key_a
+	var actual_key_b = vertex_b.key if vertex_b else key_b
+	_remove_bidirectional_cache(_adjacency_by_key, actual_key_a, actual_key_b)
+	var id_a = _resolve_id_for_input(actual_key_a, vertex_a)
+	var id_b = _resolve_id_for_input(actual_key_b, vertex_b)
+	if id_a != null and id_b != null:
+		_remove_bidirectional_cache(_adjacency_by_id, id_a, id_b)
+
+
+func _update_bidirectional_cache(store: Dictionary, a_key, b_key, weight: float) -> void:
+	if a_key == null or b_key == null:
+		return
+	_set_cache_entry(store, a_key, b_key, weight)
+	_set_cache_entry(store, b_key, a_key, weight)
+
+
+func _remove_bidirectional_cache(store: Dictionary, a_key, b_key) -> void:
+	if a_key == null or b_key == null:
+		return
+	_remove_cache_entry(store, a_key, b_key)
+	_remove_cache_entry(store, b_key, a_key)
+
+
+func _set_cache_entry(store: Dictionary, entry_key, neighbor_key, weight: float) -> void:
+	if entry_key == null or neighbor_key == null:
+		return
+	if weight <= 0.0:
+		_remove_cache_entry(store, entry_key, neighbor_key)
+		return
+	if not store.has(entry_key):
+		store[entry_key] = {}
+	var bucket: Dictionary = store[entry_key]
+	bucket[neighbor_key] = weight
+
+
+func _remove_cache_entry(store: Dictionary, entry_key, neighbor_key) -> void:
+	if not store.has(entry_key):
+		return
+	var bucket: Dictionary = store.get(entry_key)
+	if bucket == null:
+		return
+	bucket.erase(neighbor_key)
+	if bucket.is_empty():
+		store.erase(entry_key)
+
+
+func _purge_cache_for_key(store: Dictionary, key) -> void:
+	if key == null or store.is_empty():
+		return
+	if store.has(key):
+		store.erase(key)
+	var keys_snapshot: Array = store.keys()
+	var empty_keys: Array = []
+	for bucket_key in keys_snapshot:
+		var bucket: Dictionary = store.get(bucket_key)
+		if bucket and bucket.erase(key):
+			if bucket.is_empty():
+				empty_keys.append(bucket_key)
+	for bucket_key in empty_keys:
+		store.erase(bucket_key)
+
+
+func _purge_vertex_indices(vertex: Vertex, neighbor_keys: Array = []) -> void:
+	if vertex == null:
+		return
+	var primary_key = vertex.key
+	var vertex_id := vertex.id
+	_purge_cache_for_key(_adjacency_by_key, primary_key)
+	if neighbor_keys and neighbor_keys.size() > 0:
+		for neighbor_key in neighbor_keys:
+			_remove_cache_entry(_adjacency_by_key, neighbor_key, primary_key)
+	if vertex_id != -1:
+		_purge_cache_for_key(_adjacency_by_id, vertex_id)
+		if neighbor_keys and neighbor_keys.size() > 0:
+			for neighbor_key in neighbor_keys:
+				var neighbor_vertex: Vertex = get_vertex(neighbor_key)
+				var neighbor_id = _resolve_id_for_input(neighbor_key, neighbor_vertex)
+				if neighbor_id != null:
+					_remove_cache_entry(_adjacency_by_id, neighbor_id, vertex_id)
+
+
+func _rekey_cache_entry(old_key, new_key) -> void:
+	if old_key == null or new_key == null or old_key == new_key:
+		return
+	if _adjacency_by_key.has(old_key):
+		var bucket: Dictionary = _adjacency_by_key[old_key]
+		_adjacency_by_key.erase(old_key)
+		_adjacency_by_key[new_key] = bucket
+	var keys_snapshot: Array = _adjacency_by_key.keys()
+	for entry_key in keys_snapshot:
+		var bucket: Dictionary = _adjacency_by_key.get(entry_key)
+		if bucket == null or not bucket.has(old_key):
+			continue
+		var weight = bucket[old_key]
+		bucket.erase(old_key)
+		bucket[new_key] = weight
 
 
 ## Conecta dos NPCs (o ids) con un peso.
@@ -202,6 +396,135 @@ func get_relationships_for_ids(npc_or_id) -> Dictionary:
 		var nid = _to_id(neigh_key)
 		out[nid if nid != null else neigh_key] = raw[neigh_key]
 	return out
+
+
+func get_cached_neighbors(npc_or_id) -> Dictionary:
+	var key = _graph_key_from_input(npc_or_id)
+	if key == null:
+		return {}
+	var bucket: Dictionary = _adjacency_by_key.get(key)
+	return bucket.duplicate(true) if bucket else {}
+
+
+func get_cached_neighbors_ids(npc_or_id) -> Dictionary:
+	var key = _graph_key_from_input(npc_or_id)
+	if key == null:
+		return {}
+	var vertex: Vertex = get_vertex(key)
+	var resolved_id = _resolve_id_for_input(key, vertex)
+	if resolved_id == null and typeof(npc_or_id) == TYPE_INT:
+		resolved_id = int(npc_or_id)
+	if resolved_id == null:
+		return {}
+	var bucket: Dictionary = _adjacency_by_id.get(resolved_id)
+	return bucket.duplicate(true) if bucket else {}
+
+
+func get_cached_degree(npc_or_id) -> int:
+	return get_cached_neighbors(npc_or_id).size()
+
+
+func get_cached_degree_ids(npc_or_id) -> int:
+	return get_cached_neighbors_ids(npc_or_id).size()
+
+
+func get_shortest_path(a, b) -> Dictionary:
+	var key_a = _graph_key_from_input(a)
+	var key_b = _graph_key_from_input(b)
+	if key_a == null or key_b == null:
+		return {
+			"reachable": false,
+			"distance": 0.0,
+			"path": [],
+			"path_ids": []
+		}
+	if not has_vertex(key_a) or not has_vertex(key_b):
+		return {
+			"reachable": false,
+			"distance": 0.0,
+			"path": [],
+			"path_ids": []
+		}
+	var result: Dictionary = GraphAlgo.shortest_path(self, key_a, key_b)
+	var path: Array = result.get("path", [])
+	result["path_ids"] = _keys_to_ids(path)
+	return result
+
+
+func get_mutual_connections(a, b, min_weight := 0.0) -> Dictionary:
+	var key_a = _graph_key_from_input(a)
+	var key_b = _graph_key_from_input(b)
+	if key_a == null or key_b == null:
+		return {
+			"count": 0,
+			"entries": [],
+			"average_weight": 0.0,
+			"jaccard_index": 0.0,
+			"entries_ids": []
+		}
+	if not has_vertex(key_a) or not has_vertex(key_b):
+		return {
+			"count": 0,
+			"entries": [],
+			"average_weight": 0.0,
+			"jaccard_index": 0.0,
+			"entries_ids": []
+		}
+	var result: Dictionary = GraphAlgo.mutual_metrics(self, key_a, key_b, float(min_weight))
+	var entries: Array = result.get("entries", [])
+	result["entries_ids"] = _convert_entries_neighbors_to_ids(entries)
+	return result
+
+
+func simulate_rumor(seed_actor, steps := 3, attenuation := 0.6, min_strength := 0.05, use_ids := true) -> Dictionary:
+	var seed_key = _graph_key_from_input(seed_actor)
+	if seed_key == null or not has_vertex(seed_key):
+		return {
+			"seed": seed_actor,
+			"steps": int(steps),
+			"reached": [],
+			"influence": {},
+			"reached_ids": [] if use_ids else [],
+			"influence_ids": {} if use_ids else {}
+		}
+	var result: Dictionary = GraphAlgo.propagate_rumor(self, seed_key, int(steps), float(attenuation), float(min_strength))
+	var reached: Array = result.get("reached", [])
+	if use_ids:
+		result["reached_ids"] = _keys_to_ids(reached)
+		var influence: Dictionary = result.get("influence", {})
+		result["influence_ids"] = _map_influence_to_ids(influence)
+		result["seed_id"] = _to_id(result.get("seed", seed_key))
+	return result
+
+
+func _keys_to_ids(keys: Array) -> Array:
+	var out: Array = []
+	for key in keys:
+		var mapped = _to_id(key)
+		out.append(mapped if mapped != null else key)
+	return out
+
+
+func _convert_entries_neighbors_to_ids(entries: Array) -> Array:
+	var out: Array = []
+	for entry in entries:
+		if typeof(entry) != TYPE_DICTIONARY:
+			continue
+		var digest: Dictionary = entry.duplicate(true)
+		var neighbor_key = entry.get("neighbor")
+		var neighbor_id = _to_id(neighbor_key)
+		if neighbor_id != null:
+			digest["neighbor_id"] = neighbor_id
+		out.append(digest)
+	return out
+
+
+func _map_influence_to_ids(influence: Dictionary) -> Dictionary:
+	var mapped: Dictionary = {}
+	for key in influence.keys():
+		var nid = _to_id(key)
+		mapped[nid if nid != null else key] = influence[key]
+	return mapped
 
 
 ## Limita el número de conexiones activas según la constante `DUNBAR_LIMIT`.
@@ -327,18 +650,19 @@ func remove_npc(npc_or_id) -> void:
 			_remove_vertex_for_key(key)
 		else:
 			_pending_vertices.erase(key)
+			_purge_cache_for_key(_adjacency_by_id, key)
 
 
 ## Limpia nodos cuyo objeto ya no es válido. Devuelve la cantidad eliminada.
 func cleanup_invalid_nodes() -> int:
 	var removed := 0
-	var keys_to_remove: Array = []
-	for key in vertices.keys():
-		if key is Object and not is_instance_valid(key):
-			keys_to_remove.append(key)
-	for key in keys_to_remove:
-		if _remove_vertex_for_key(key):
-			removed += 1
+	var keys_snapshot := vertices.keys()
+	for key in keys_snapshot:
+		if typeof(key) == TYPE_OBJECT:
+			var obj = key
+			if not is_instance_valid(obj):
+				if _remove_vertex_for_key(obj):
+					removed += 1
 	var stale_ids: Array = []
 	for npc_id in _npc_registry.keys():
 		var ref: WeakRef = _npc_registry[npc_id]
@@ -347,6 +671,7 @@ func cleanup_invalid_nodes() -> int:
 	for npc_id in stale_ids:
 		_npc_registry.erase(npc_id)
 		_pending_vertices.erase(npc_id)
+		_purge_cache_for_key(_adjacency_by_id, npc_id)
 	return removed
 
 
@@ -354,11 +679,13 @@ func cleanup_invalid_nodes() -> int:
 func validate_npc_references() -> Array[String]:
 	var issues: Array[String] = []
 	for key in vertices.keys():
-		if key is Object and not is_instance_valid(key):
-			issues.append("Dangling NPC reference for key %s" % [str(key)])
+		if typeof(key) == TYPE_OBJECT:
+			var obj = key
+			if not is_instance_valid(obj):
+				issues.append("Dangling NPC reference for freed key")
 	for npc in _npc_to_vertex.keys():
 		if not is_instance_valid(npc):
-			issues.append("Stale NPC object with instance_id %d" % [npc.get_instance_id()])
+			issues.append("Stale NPC object reference detected")
 	var seen_ids: Dictionary = {}
 	for npc_id in _npc_registry.keys():
 		var ref: WeakRef = _npc_registry[npc_id]
@@ -447,7 +774,7 @@ func _serialize_nodes() -> Array[Dictionary]:
 			"id": v_id,
 			"meta": vertex.meta.duplicate(true)
 		}
-		entry["has_object"] = key is Object
+		entry["has_object"] = typeof(key) == TYPE_OBJECT
 		out.append(entry)
 	return out
 
@@ -738,7 +1065,7 @@ func test_edge_cases() -> Array[String]:
 	temp.ensure_npc(npc_a)
 	results.append("Ensure_npc handles object keys: %s" % ["PASS" if temp.has_vertex(npc_a) else "FAIL"])
 	temp.remove_npc(npc_a)
-	npc_a.queue_free()
+	npc_a.free()
 	temp.decay_rate_per_second = 5.0
 	temp.connect_npcs(20, 21, 2.5)
 	temp.apply_decay(1.0)
@@ -757,3 +1084,5 @@ func clear() -> void:
 	_npc_to_vertex.clear()
 	_pending_vertices.clear()
 	_connected_npcs.clear()
+	_adjacency_by_key.clear()
+	_adjacency_by_id.clear()
