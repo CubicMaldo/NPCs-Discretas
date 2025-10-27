@@ -18,12 +18,15 @@ static func average_affinity(graph: Graph) -> float:
 
 ## Camino más corto clásico (Dijkstra-like) sobre pesos interpretados como costos.
 ##
+## IMPORTANTE: Este algoritmo respeta la direccionalidad del grafo. Solo puede encontrar
+## caminos que sigan las aristas en su dirección correcta (A→B).
+##
 ## Parámetros:
-## - graph: Grafo que expone vecinos y pesos (costos). Los pesos más altos incrementan la distancia total.
+## - graph: Grafo dirigido que expone vecinos y pesos (costos). Los pesos más altos incrementan la distancia total.
 ## - source, target: claves de vértice (ids o llaves internas) presentes en el grafo.
 ##
 ## Retorna (Dictionary):
-## - reachable: bool indicando si existe ruta.
+## - reachable: bool indicando si existe ruta dirigida desde source hasta target.
 ## - distance: float con la suma de pesos a lo largo de la ruta encontrada.
 ## - path: Array con las claves de vértice que forman la ruta (incluye source y target).
 static func shortest_path(graph: Graph, source, target) -> Dictionary:
@@ -90,10 +93,10 @@ static func shortest_path(graph: Graph, source, target) -> Dictionary:
 ## Bellman-Ford: camino más corto con soporte para pesos negativos.
 ##
 ## Uso: cuando pueden existir aristas con pesos negativos. Detecta ciclos negativos alcanzables.
-## Nota: Para grafos no dirigidos, se relajan ambas direcciones de cada arista.
+## Nota: Ahora soporta grafos dirigidos. Solo relaja aristas en la dirección que existen.
 ##
 ## Parámetros:
-## - graph: Grafo que expone get_edges() y get_nodes().
+## - graph: Grafo dirigido que expone get_edges() y get_nodes().
 ## - source, target: claves de vértices.
 ##
 ## Retorna (Dictionary):
@@ -137,17 +140,12 @@ static func shortest_path_bellman_ford(graph: Graph, source, target) -> Dictiona
 			var u = e.get("source")
 			var v = e.get("target")
 			var w: float = float(e.get("weight", 0.0))
-			# u -> v
+			# Relajar u -> v (grafo dirigido)
 			var du: float = float(dist.get(u, INF))
 			var dv: float = float(dist.get(v, INF))
 			if du + w < dv:
 				dist[v] = du + w
 				prev[v] = u
-				updated = true
-			# v -> u (grafo no dirigido)
-			if dv + w < du:
-				dist[u] = dv + w
-				prev[u] = v
 				updated = true
 		if not updated:
 			break
@@ -159,7 +157,7 @@ static func shortest_path_bellman_ford(graph: Graph, source, target) -> Dictiona
 		var w2: float = float(e.get("weight", 0.0))
 		var du2: float = float(dist.get(u2, INF))
 		var dv2: float = float(dist.get(v2, INF))
-		if du2 + w2 < dv2 or dv2 + w2 < du2:
+		if du2 + w2 < dv2:
 			result["negative_cycle"] = true
 			break
 
@@ -187,16 +185,19 @@ static func shortest_path_bellman_ford(graph: Graph, source, target) -> Dictiona
 
 ## Strongest path (máximo producto de familiaridades a lo largo del camino).
 ##
+## IMPORTANTE: Este algoritmo respeta la direccionalidad del grafo. Busca el camino dirigido
+## más fuerte desde source hasta target siguiendo solo las aristas en su dirección correcta.
+##
 ## Semántica:
 ## - Los pesos del grafo representan familiaridades/conocimiento (tie strength) en [0..100].
 ## - Se normalizan a [0..1] y se busca maximizar el producto acumulado (confianza/probabilidad compuesta).
 ##
 ## Parámetros:
-## - graph: Grafo con pesos como familiaridades.
+## - graph: Grafo dirigido con pesos como familiaridades.
 ## - source, target: claves de vértice.
 ##
 ## Retorna (Dictionary):
-## - reachable: bool indicando si hay camino.
+## - reachable: bool indicando si hay camino dirigido.
 ## - strength: float en [0..1] con el producto máximo de afinidades.
 ## - path: Array de claves de vértice con el camino encontrado.
 static func strongest_path_dijkstra(graph: Graph, source, target) -> Dictionary:
@@ -290,8 +291,12 @@ static func _pop_strongest(queue: Array, strengths: Dictionary):
 
 ## Métricas de amistad mutua entre dos actores.
 ##
+## IMPORTANTE: En un grafo dirigido, este algoritmo busca vecinos que ambos actores "conocen"
+## (tienen aristas salientes hacia ellos). Para relaciones bidireccionales completas,
+## ambas aristas deben existir explícitamente.
+##
 ## Parámetros:
-## - graph: grafo social.
+## - graph: grafo social dirigido.
 ## - a, b: claves de vértices a comparar.
 ## - min_weight: umbral mínimo de familiaridad para considerar a un vecino como conexión válida.
 ##
@@ -299,7 +304,7 @@ static func _pop_strongest(queue: Array, strengths: Dictionary):
 ## - count: número de vecinos mutuos por encima del umbral.
 ## - entries: Array de diccionarios con detalle por vecino (neighbor, weight_a, weight_b, average_weight).
 ## - average_weight: media de las afinidades promedio entre a y b hacia los mutuos.
-## - jaccard_index: similitud entre conjuntos de vecinos (0..1).
+## - jaccard_index: similitud entre conjuntos de vecinos salientes (0..1).
 static func mutual_metrics(graph: Graph, a, b, min_weight: float = 0.0) -> Dictionary:
 	var result := {
 		"count": 0,
@@ -340,13 +345,16 @@ static func mutual_metrics(graph: Graph, a, b, min_weight: float = 0.0) -> Dicti
 
 ## Simula la propagación de un rumor/influencia desde un actor semilla.
 ##
+## IMPORTANTE: En un grafo dirigido, la influencia solo se propaga siguiendo las aristas
+## en su dirección correcta (A→B). Los rumores NO se propagan hacia atrás.
+##
 ## Semántica:
-## - En cada paso, la influencia se propaga a vecinos con: propagated = strength * attenuation * normalized(weight),
+## - En cada paso, la influencia se propaga a vecinos salientes con: propagated = strength * attenuation * normalized(weight),
 ##   donde weight es la familiaridad normalizada a [0..1].
 ## - Se ignoran propagaciones por debajo de min_strength.
 ##
 ## Parámetros:
-## - graph: grafo social.
+## - graph: grafo social dirigido.
 ## - seed_key: clave del actor inicial.
 ## - steps: pasos de propagación (profundidad máxima).
 ## - attenuation: factor de atenuación por salto (0..1).
@@ -355,7 +363,7 @@ static func mutual_metrics(graph: Graph, a, b, min_weight: float = 0.0) -> Dicti
 ## Retorna (Dictionary):
 ## - seed: clave semilla.
 ## - steps: pasos simulados.
-## - reached: claves alcanzadas (Array).
+## - reached: claves alcanzadas siguiendo aristas dirigidas (Array).
 ## - influence: Dict clave->float con influencia máxima registrada en cada nodo.
 static func propagate_rumor(graph: Graph, seed_key, steps: int, attenuation: float, min_strength: float) -> Dictionary:
 	var result := {
