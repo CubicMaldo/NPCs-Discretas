@@ -1,14 +1,16 @@
-## Representa una arista no dirigida entre dos `Vertex`.
-## Nombres neutrales (`endpoint_a`/`endpoint_b`) evitan implicar dirección.
+## Representa una arista dirigida entre dos `Vertex`.
+## endpoint_a es el origen (fuente) y endpoint_b es el destino.
+## Nota de dominio: en el grafo social el peso representa la familiaridad/conocimiento
+## que endpoint_a tiene de endpoint_b (tie strength), típicamente [0..100].
 class_name Edge
 
-## Vértice extremo A.
+## Vértice extremo A (origen/fuente en arista dirigida).
 var endpoint_a: Vertex = null
-## Vértice extremo B.
+## Vértice extremo B (destino en arista dirigida).
 var endpoint_b: Vertex = null
-## Peso de la arista.
-## Nota de dominio: en el grafo social este valor representa la familiaridad/conocimiento (tie strength)
-## entre dos actores, típicamente en un rango [0..100].
+## Peso de la arista dirigida (de A hacia B).
+## Nota de dominio: en el grafo social este valor representa la familiaridad/conocimiento
+## que A tiene de B (tie strength), típicamente en un rango [0..100].
 var weight: float = 0.0
 ## Atributos adicionales de la arista (multi-atributo):
 ## Ej.: { "hostility": float, "respect": float, ... }

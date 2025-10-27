@@ -1,5 +1,6 @@
-## Clase que representa un grafo no dirigido y ponderado. 
-## Permite agregar, eliminar y consultar nodos y aristas, con soporte para metadata.
+## Clase que representa un grafo dirigido y ponderado.
+## Permite agregar, eliminar y consultar nodos y aristas dirigidas, con soporte para metadata.
+## Las aristas son direccionales: A→B no implica B→A automáticamente.
 class_name Graph
 
 # ============================================================================
@@ -141,10 +142,10 @@ func get_node_count() -> int:
 # GESTIÓN DE ARISTAS
 # ============================================================================
 
-## Crea o actualiza una conexión bidireccional entre dos nodos.
+## Crea o actualiza una conexión dirigida desde `a` hacia `b`.
 ## [br]
 ## Argumentos:
-## - `a`: Nodo origen.
+## - `a`: Nodo origen (fuente).
 ## - `b`: Nodo destino.
 ## - `weight`: Peso de la conexión (no negativo). En un grafo social este peso representa
 ##   la familiaridad/conocimiento (tie strength) entre los actores en un rango sugerido [0..100].
@@ -157,7 +158,7 @@ func add_connection(a, b, weight: float) -> void:
 	ensure_node(b)
 
 	if weight < 0.0:
-		push_warning("Graph.add_connection: negative weight %f for %s-%s" % [weight, a, b])
+		push_warning("Graph.add_connection: negative weight %f for %s->%s" % [weight, a, b])
 		remove_connection(a, b)
 		return
 	
@@ -167,16 +168,15 @@ func add_connection(a, b, weight: float) -> void:
 	if edge == null:
 		edge = Edge.new(va, vb, weight)
 		va.edges[b] = edge
-		vb.edges[a] = edge
 		emit_signal("edge_added", a, b)
 	else:
 		edge.weight = weight
 
 
-## Conecta dos nodos, creando ambos si no existen.
+## Conecta dos nodos con una arista dirigida, creando ambos si no existen.
 ## [br]
 ## Argumentos:
-## - `a`: Nodo origen.
+## - `a`: Nodo origen (fuente).
 ## - `b`: Nodo destino.
 ## - `weight`: Peso de la conexión (por defecto 1.0).
 ## - `meta_a`: Metadata opcional para el nodo A.
@@ -187,10 +187,12 @@ func connect_vertices(a, b, weight := 1.0, meta_a := {}, meta_b := {}) -> void:
 	add_connection(a, b, weight)
 
 
-## Elimina la arista entre dos nodos si existe.
+## Elimina la arista dirigida desde `a` hacia `b` si existe.
+## [br]
+## NOTA: En un grafo dirigido, esto NO elimina la arista de B→A.
 ## [br]
 ## Argumentos:
-## - `a`: Nodo origen.
+## - `a`: Nodo origen (fuente).
 ## - `b`: Nodo destino.
 func remove_connection(a, b) -> void:
 	var va: Vertex = vertices.get(a)
@@ -200,13 +202,7 @@ func remove_connection(a, b) -> void:
 	if edge == null:
 		return
 
-	var src := edge.endpoint_a
-	var dst := edge.endpoint_b
-	if src:
-		src.edges.erase(b)
-	if dst:
-		dst.edges.erase(a)
-
+	va.edges.erase(b)
 	emit_signal("edge_removed", a, b)
 
 
@@ -224,51 +220,50 @@ func clear() -> void:
 # CONSULTAS DE ARISTAS
 # ============================================================================
 
-## Devuelve el peso de la arista entre `a` y `b`, o `null` si no existe.
+## Devuelve el peso de la arista dirigida desde `a` hacia `b`, o `null` si no existe.
 func get_edge(a, b):
 	var e = get_edge_resource(a, b)
 	return e.weight if e else null
 
 
-## Obtiene el objeto `Edge` entre dos nodos, si existe.
+## Obtiene el objeto `Edge` que va desde `a` hacia `b`, si existe.
 func get_edge_resource(a, b):
 	var va: Vertex = vertices.get(a)
 	return va.get_edge_to(b) if va else null
 
 
-## Devuelve `true` si existe una arista entre `a` y `b`.
+## Devuelve `true` si existe una arista dirigida desde `a` hacia `b`.
 func has_edge(a, b) -> bool:
 	return get_edge_resource(a, b) != null
 
 
-## Retorna una lista de aristas sin duplicados.
+## Retorna una lista de todas las aristas dirigidas en el grafo.
 ## [br]
 ## Cada entrada tiene el formato:
 ## ```
-## { "source": a, "target": b, "weight": w }
+## { "source": a, "target": b, "weight": w, "meta": {...} }
 ## ```
 func get_edges() -> Array:
 	var out: Array = []
 	for a_key in vertices:
 		var va: Vertex = vertices[a_key]
 		for b_key in va.edges:
-			if _is_primary_endpoint(a_key, b_key):
-				var e: Edge = va.edges[b_key]
-				out.append({
-					"source": e.endpoint_a.key,
-					"target": e.endpoint_b.key,
-					"weight": e.weight,
-					"meta": e.meta.duplicate(true)
-				})
+			var e: Edge = va.edges[b_key]
+			out.append({
+				"source": e.endpoint_a.key,
+				"target": e.endpoint_b.key,
+				"weight": e.weight,
+				"meta": e.meta.duplicate(true)
+			})
 	return out
 
 
-## Devuelve el número total de aristas en el grafo.
+## Devuelve el número total de aristas dirigidas en el grafo.
 func get_edge_count() -> int:
-	var deg_sum := 0
+	var count := 0
 	for k in vertices:
-		deg_sum += (vertices[k] as Vertex).edges.size()
-	return deg_sum >> 1
+		count += (vertices[k] as Vertex).edges.size()
+	return count
 
 # ============================================================================
 # CONSULTAS DE VECINDAD
@@ -351,24 +346,3 @@ func debug_print():
 ## Convierte la clave a entero si aplica, o devuelve -1.
 func _id_as_int(k) -> int:
 	return int(k) if typeof(k) == TYPE_INT else -1
-
-
-## Determina un orden estable entre dos claves de nodo.
-## [br]
-## Esto evita duplicados al iterar sobre aristas.
-func _is_primary_endpoint(a, b) -> bool:
-	if a == b:
-		return false
-	var ta := typeof(a)
-	var tb := typeof(b)
-	if ta != tb:
-		return ta < tb
-	match ta:
-		TYPE_INT, TYPE_FLOAT, TYPE_BOOL:
-			return a < b
-		TYPE_STRING:
-			return String(a) < String(b)
-		TYPE_OBJECT:
-			return (a as Object).get_instance_id() < (b as Object).get_instance_id()
-		_:
-			return hash(a) < hash(b)

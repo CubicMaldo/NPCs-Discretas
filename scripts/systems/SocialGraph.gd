@@ -232,6 +232,36 @@ func _resolve_id_for_input(input, vertex: Vertex = null):
 	return null
 
 
+## Actualiza los índices del caché para una arista dirigida A→B.
+func _update_edge_indices_directed(key_a, key_b, weight: float) -> void:
+	if weight <= 0.0:
+		_remove_edge_indices_directed(key_a, key_b)
+		return
+	var vertex_a: Vertex = get_vertex(key_a)
+	var vertex_b: Vertex = get_vertex(key_b)
+	var actual_key_a = vertex_a.key if vertex_a else key_a
+	var actual_key_b = vertex_b.key if vertex_b else key_b
+	_update_directed_cache(_adjacency_by_key, actual_key_a, actual_key_b, weight)
+	var id_a = _resolve_id_for_input(actual_key_a, vertex_a)
+	var id_b = _resolve_id_for_input(actual_key_b, vertex_b)
+	if id_a != null and id_b != null:
+		_update_directed_cache(_adjacency_by_id, id_a, id_b, weight)
+
+
+## Elimina del caché una arista dirigida A→B.
+func _remove_edge_indices_directed(key_a, key_b) -> void:
+	var vertex_a: Vertex = get_vertex(key_a)
+	var vertex_b: Vertex = get_vertex(key_b)
+	var actual_key_a = vertex_a.key if vertex_a else key_a
+	var actual_key_b = vertex_b.key if vertex_b else key_b
+	_remove_directed_cache(_adjacency_by_key, actual_key_a, actual_key_b)
+	var id_a = _resolve_id_for_input(actual_key_a, vertex_a)
+	var id_b = _resolve_id_for_input(actual_key_b, vertex_b)
+	if id_a != null and id_b != null:
+		_remove_directed_cache(_adjacency_by_id, id_a, id_b)
+
+
+## Actualiza los índices del caché bidireccional (usado en código legacy).
 func _update_edge_indices(key_a, key_b, weight: float) -> void:
 	if weight <= 0.0:
 		_remove_edge_indices(key_a, key_b)
@@ -259,6 +289,21 @@ func _remove_edge_indices(key_a, key_b) -> void:
 		_remove_bidirectional_cache(_adjacency_by_id, id_a, id_b)
 
 
+## Actualiza el caché para una arista dirigida A→B
+func _update_directed_cache(store: Dictionary, from_key, to_key, weight: float) -> void:
+	if from_key == null or to_key == null:
+		return
+	_set_cache_entry(store, from_key, to_key, weight)
+
+
+## Elimina del caché una arista dirigida A→B
+func _remove_directed_cache(store: Dictionary, from_key, to_key) -> void:
+	if from_key == null or to_key == null:
+		return
+	_remove_cache_entry(store, from_key, to_key)
+
+
+## Actualiza el caché para ambas direcciones (bidireccional, usado en código legacy)
 func _update_bidirectional_cache(store: Dictionary, a_key, b_key, weight: float) -> void:
 	if a_key == null or b_key == null:
 		return
@@ -266,6 +311,7 @@ func _update_bidirectional_cache(store: Dictionary, a_key, b_key, weight: float)
 	_set_cache_entry(store, b_key, a_key, weight)
 
 
+## Elimina del caché ambas direcciones (bidireccional, usado en código legacy)
 func _remove_bidirectional_cache(store: Dictionary, a_key, b_key) -> void:
 	if a_key == null or b_key == null:
 		return
@@ -348,24 +394,59 @@ func _rekey_cache_entry(old_key, new_key) -> void:
 		bucket[new_key] = weight
 
 
-## Conecta dos NPCs (o ids) con un peso.
+## Conecta dos NPCs con una arista dirigida (A conoce a B).
+## [br]
+## IMPORTANTE: Esto es una arista dirigida. Si quieres una relación bidireccional
+## (ambos se conocen), usa `connect_npcs_mutual()` en su lugar.
+## [br]
 ## Argumentos:
-## - `a`, `b`: Objetos NPC o ids enteros.
-## - `weight`: Familiaridad/conocimiento a asignar (tie strength). Rango sugerido [0..100].
-## - `meta_a`, `meta_b`: Metadata para cada nodo, si se crean.
-func connect_npcs(a, b, weight := 1.0, meta_a := {}, meta_b := {}) -> void:
-	if a == b:
+## - `a`: NPC origen o id.
+## - `b`: NPC destino o id.
+## - `familiarity`: Peso de la familiaridad/conocimiento que A tiene de B [0..100].
+## - `meta_a`: Metadata opcional para el nodo A.
+## - `meta_b`: Metadata opcional para el nodo B.
+func connect_npcs(a, b, familiarity: float, meta_a := {}, meta_b := {}) -> void:
+	var key_a = _graph_key_from_input(a)
+	var key_b = _graph_key_from_input(b)
+	if key_a == null or key_b == null:
+		push_error("SocialGraph.connect_npcs: invalid input")
 		return
-	var vertex_a: Vertex = ensure_npc(a, meta_a)
-	var vertex_b: Vertex = ensure_npc(b, meta_b)
-	var key_a = vertex_a.key if vertex_a else _normalize_key(a)
-	var key_b = vertex_b.key if vertex_b else _normalize_key(b)
-	add_connection(key_a, key_b, float(weight))
-	_enforce_dunbar_limit(key_a)
-	_enforce_dunbar_limit(key_b)
+	ensure_npc(a, meta_a)
+	ensure_npc(b, meta_b)
+	add_connection(key_a, key_b, familiarity)
+	_update_edge_indices_directed(key_a, key_b, familiarity)
+
+
+## Conecta dos NPCs con relación bidireccional (ambos se conocen mutuamente).
+## [br]
+## Crea dos aristas dirigidas: A→B y B→A con los pesos especificados.
+## [br]
+## Argumentos:
+## - `a`: NPC origen o id.
+## - `b`: NPC destino o id.
+## - `familiarity_a_to_b`: Familiaridad que A tiene de B [0..100].
+## - `familiarity_b_to_a`: Familiaridad que B tiene de A [0..100]. Si es `null`, usa el mismo valor que A→B.
+## - `meta_a`: Metadata opcional para el nodo A.
+## - `meta_b`: Metadata opcional para el nodo B.
+func connect_npcs_mutual(a, b, familiarity_a_to_b: float, familiarity_b_to_a: Variant = null, meta_a := {}, meta_b := {}) -> void:
+	var key_a = _graph_key_from_input(a)
+	var key_b = _graph_key_from_input(b)
+	if key_a == null or key_b == null:
+		push_error("SocialGraph.connect_npcs_mutual: invalid input")
+		return
+	
+	var fam_b_a := familiarity_a_to_b if familiarity_b_to_a == null else float(familiarity_b_to_a)
+	
+	ensure_npc(a, meta_a)
+	ensure_npc(b, meta_b)
+	add_connection(key_a, key_b, familiarity_a_to_b)
+	add_connection(key_b, key_a, fam_b_a)
+	_update_edge_indices_directed(key_a, key_b, familiarity_a_to_b)
+	_update_edge_indices_directed(key_b, key_a, fam_b_a)
 
 
 ## Establece explícitamente la familiaridad entre dos NPCs (alias canónico del peso).
+## Crea una arista dirigida A→B.
 func set_familiarity(a, b, weight: float) -> void:
 	connect_npcs(a, b, weight)
 
