@@ -1,4 +1,4 @@
-extends "res://scripts/systems/NPCState.gd"
+extends NPCState
 class_name IdleState
 
 @export var min_duration: float = 0.5

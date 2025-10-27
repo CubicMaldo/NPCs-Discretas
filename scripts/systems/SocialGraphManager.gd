@@ -7,8 +7,8 @@ const SocialGraphClass = preload("res://scripts/systems/SocialGraph.gd")
 var social_graph: SocialGraph
 
 ## Señales espejo del grafo social para que otros sistemas se conecten aquí.
-signal interaction_registered(a_key, b_key, new_affinity)
-signal interaction_registered_ids(a_id, b_id, new_affinity)
+signal interaction_registered(a_key, b_key, new_familiarity)
+signal interaction_registered_ids(a_id, b_id, new_familiarity)
 
 func _ready() -> void:
 	social_graph = SocialGraphClass.new()
@@ -35,9 +35,13 @@ func remove_connection(a, b) -> void:
 func remove_npc(npc_or_id) -> void:
 	social_graph.remove_npc(npc_or_id)
 
-## Establece explícitamente la afinidad.
-func set_affinity(a, b, affinity: float) -> void:
-	social_graph.set_affinity(a, b, affinity)
+## Establece explícitamente la familiaridad (peso del vínculo social).
+func set_familiarity(a, b, familiarity: float) -> void:
+	social_graph.set_familiarity(a, b, familiarity)
+
+## Establece hostilidad explícitamente.
+func set_hostility(a, b, hostility: float) -> void:
+	social_graph.set_hostility(a, b, hostility)
 
 ## Comprueba si la relación está por encima de un umbral.
 func has_relationship_at_least(a, b, threshold: float) -> bool:
@@ -46,6 +50,10 @@ func has_relationship_at_least(a, b, threshold: float) -> bool:
 ## Rompe la relación si cae por debajo del umbral.
 func break_if_below(a, b, threshold: float) -> bool:
 	return social_graph.break_if_below(a, b, threshold)
+
+## Obtiene la familiaridad actual entre dos actores (o `default` si no hay arista).
+func get_familiarity(a, b, default := 0.0) -> float:
+	return social_graph.get_familiarity(a, b, default)
 
 ## Devuelve relaciones usando las claves almacenadas (objetos o ids).
 func get_relationships_for(key) -> Dictionary:
@@ -77,11 +85,24 @@ func get_cached_degree_ids(key) -> int:
 func get_shortest_path(a, b) -> Dictionary:
 	return social_graph.get_shortest_path(a, b)
 
+func get_shortest_path_robust(a, b) -> Dictionary:
+	return social_graph.get_shortest_path_robust(a, b)
+
+func get_strongest_path(a, b) -> Dictionary:
+	return social_graph.get_strongest_path(a, b)
+
 func get_mutual_connections(a, b, min_weight := 0.0) -> Dictionary:
 	return social_graph.get_mutual_connections(a, b, min_weight)
 
 func simulate_rumor(seed_actor, steps := 3, attenuation := 0.6, min_strength := 0.05, use_ids := true) -> Dictionary:
 	return social_graph.simulate_rumor(seed_actor, steps, attenuation, min_strength, use_ids)
+
+## Atributos por vecindad
+func get_neighbor_attribute_map(key, field: String, default_value: Variant = null) -> Dictionary:
+	return social_graph.get_neighbor_attribute_map(key, field, default_value)
+
+func get_neighbor_attribute_map_ids(key, field: String, default_value: Variant = null) -> Dictionary:
+	return social_graph.get_neighbor_attribute_map_ids(key, field, default_value)
 
 ## Depuración rápida (imprime estado del grafo).
 func debug_dump() -> void:

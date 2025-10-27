@@ -7,7 +7,12 @@ var endpoint_a: Vertex = null
 ## Vértice extremo B.
 var endpoint_b: Vertex = null
 ## Peso de la arista.
+## Nota de dominio: en el grafo social este valor representa la familiaridad/conocimiento (tie strength)
+## entre dos actores, típicamente en un rango [0..100].
 var weight: float = 0.0
+## Atributos adicionales de la arista (multi-atributo):
+## Ej.: { "hostility": float, "respect": float, ... }
+var meta: Dictionary = {}
 
 
 ## Inicializa la arista.
@@ -16,10 +21,11 @@ var weight: float = 0.0
 ## - `_a`: Vértice extremo A.
 ## - `_b`: Vértice extremo B.
 ## - `_weight`: Peso inicial (float).
-func _init(_a: Vertex = null, _b: Vertex = null, _weight: float = 0.0):
+func _init(_a: Vertex = null, _b: Vertex = null, _weight: float = 0.0, _meta: Dictionary = {}):
 	endpoint_a = _a
 	endpoint_b = _b
 	weight = _weight
+	meta = _meta.duplicate(true) if _meta else {}
 
 
 ## Devuelve un Array con los dos vértices extremos: [endpoint_a, endpoint_b].

@@ -4,13 +4,11 @@
 ## - Usa objetos `NPC` como claves de primer orden cuando es posible.
 ## - Atajos para registrar NPCs, conectar/desconectar por objeto o id entero cuando no exista el objeto.
 ## - Consultas orientadas a claves-objeto (`get_relationships_for`, top relaciones, filtros por umbral) y variantes basadas en ids.
-## - Registro de interacciones con heurísticas opcionales expuestas por cada `NPC` para ajustar la afinidad.
+## - Registro de interacciones con heurísticas opcionales expuestas por cada `NPC` para ajustar la familiaridad.
 class_name SocialGraph
 extends Graph
 
-const GraphAlgo = preload("res://scripts/utils/GraphAlgorithms.gd")
-
-## Emitido cuando se registra una interacción y se actualiza la afinidad.
+## Emitido cuando se registra una interacción y se actualiza la familiaridad (peso del vínculo).
 ## Emite las claves tal y como se almacenan en el grafo (NPC u id).
 signal interaction_registered(a_key, b_key, delta, new_weight)
 ## Variante opcional que emite ids enteros cuando es posible (puede emitir null si no hay npc_id).
@@ -167,9 +165,9 @@ func _to_id(entity_or_key):
 	return null
 
 
-func add_connection(a, b, affinity: float) -> void:
+func add_connection(a, b, familiarity: float) -> void:
 	var existed := has_edge(a, b)
-	super.add_connection(a, b, affinity)
+	super.add_connection(a, b, familiarity)
 	if has_edge(a, b):
 		var weight: float = float(get_edge(a, b))
 		_update_edge_indices(a, b, weight)
@@ -353,7 +351,7 @@ func _rekey_cache_entry(old_key, new_key) -> void:
 ## Conecta dos NPCs (o ids) con un peso.
 ## Argumentos:
 ## - `a`, `b`: Objetos NPC o ids enteros.
-## - `weight`: Afinidad a asignar.
+## - `weight`: Familiaridad/conocimiento a asignar (tie strength). Rango sugerido [0..100].
 ## - `meta_a`, `meta_b`: Metadata para cada nodo, si se crean.
 func connect_npcs(a, b, weight := 1.0, meta_a := {}, meta_b := {}) -> void:
 	if a == b:
@@ -367,9 +365,30 @@ func connect_npcs(a, b, weight := 1.0, meta_a := {}, meta_b := {}) -> void:
 	_enforce_dunbar_limit(key_b)
 
 
-## Establece explícitamente la afinidad entre dos NPCs.
-func set_affinity(a, b, weight: float) -> void:
+## Establece explícitamente la familiaridad entre dos NPCs (alias canónico del peso).
+func set_familiarity(a, b, weight: float) -> void:
 	connect_npcs(a, b, weight)
+
+## [DEPRECATED] Mantenido por compatibilidad. Usa `set_familiarity`.
+func set_affinity(a, b, weight: float) -> void:
+	set_familiarity(a, b, weight)
+
+## Establece explícitamente la hostilidad entre dos NPCs (0..100 por convención).
+func set_hostility(a, b, hostility: float) -> void:
+	var ka = _normalize_key(a)
+	var kb = _normalize_key(b)
+	if ka == null or kb == null:
+		return
+	# Asegura que exista la arista con alguna familiaridad (0.0 si no estaba)
+	if not has_edge(ka, kb):
+		add_connection(ka, kb, 0.0)
+	set_edge_attribute(ka, kb, "hostility", float(hostility))
+
+## Obtiene la hostilidad entre dos NPCs.
+func get_hostility(a, b, default := 0.0) -> float:
+	var ka = _normalize_key(a)
+	var kb = _normalize_key(b)
+	return float(get_edge_attribute(ka, kb, "hostility", default))
 
 
 ## Elimina la relación (si existe) entre dos NPCs.
@@ -379,7 +398,7 @@ func break_relationship(a, b) -> void:
 	remove_connection(ka, kb)
 
 
-## Devuelve las relaciones (id -> afinidad) de un NPC.
+## Devuelve las relaciones (clave -> familiaridad) de un NPC.
 ## Si las claves vecinas no son enteras, intenta normalizarlas a `npc_id`.
 func get_relationships_for(npc_or_id) -> Dictionary:
 	var k = _normalize_key(npc_or_id)
@@ -387,7 +406,7 @@ func get_relationships_for(npc_or_id) -> Dictionary:
 	return get_neighbor_weights(k)
 
 
-## Variante: devuelve diccionario id->afinidad cuando es posible; mantiene claves originales si no hay id.
+## Variante: devuelve diccionario id->familiaridad cuando es posible; mantiene claves originales si no hay id.
 func get_relationships_for_ids(npc_or_id) -> Dictionary:
 	var k = _normalize_key(npc_or_id)
 	var raw := get_neighbor_weights(k)
@@ -445,7 +464,37 @@ func get_shortest_path(a, b) -> Dictionary:
 			"path": [],
 			"path_ids": []
 		}
-	var result: Dictionary = GraphAlgo.shortest_path(self, key_a, key_b)
+	var result: Dictionary = GraphAlgorithms.shortest_path(self, key_a, key_b)
+	var path: Array = result.get("path", [])
+	result["path_ids"] = _keys_to_ids(path)
+	return result
+
+
+## Calcula el camino más fuerte entre dos actores usando el algoritmo de propagación de fuerza.
+## El camino más fuerte maximiza el producto de las familiaridades normalizadas (0..1).
+## Retorna un diccionario con:
+## - reachable: bool indicando si hay camino.
+## - strength: float con el producto de familiaridades del mejor camino.
+## - path: Array de claves del camino encontrado.
+## - path_ids: Array de ids enteros del camino (cuando es posible).
+func get_strongest_path(a, b) -> Dictionary:
+	var key_a = _graph_key_from_input(a)
+	var key_b = _graph_key_from_input(b)
+	if key_a == null or key_b == null:
+		return {
+			"reachable": false,
+			"strength": 0.0,
+			"path": [],
+			"path_ids": []
+		}
+	if not has_vertex(key_a) or not has_vertex(key_b):
+		return {
+			"reachable": false,
+			"strength": 0.0,
+			"path": [],
+			"path_ids": []
+		}
+	var result: Dictionary = GraphAlgorithms.strongest_path(self, key_a, key_b)
 	var path: Array = result.get("path", [])
 	result["path_ids"] = _keys_to_ids(path)
 	return result
@@ -470,7 +519,7 @@ func get_mutual_connections(a, b, min_weight := 0.0) -> Dictionary:
 			"jaccard_index": 0.0,
 			"entries_ids": []
 		}
-	var result: Dictionary = GraphAlgo.mutual_metrics(self, key_a, key_b, float(min_weight))
+	var result: Dictionary = GraphAlgorithms.mutual_metrics(self, key_a, key_b, float(min_weight))
 	var entries: Array = result.get("entries", [])
 	result["entries_ids"] = _convert_entries_neighbors_to_ids(entries)
 	return result
@@ -487,7 +536,7 @@ func simulate_rumor(seed_actor, steps := 3, attenuation := 0.6, min_strength := 
 			"reached_ids": [] if use_ids else [],
 			"influence_ids": {} if use_ids else {}
 		}
-	var result: Dictionary = GraphAlgo.propagate_rumor(self, seed_key, int(steps), float(attenuation), float(min_strength))
+	var result: Dictionary = GraphAlgorithms.propagate_rumor(self, seed_key, int(steps), float(attenuation), float(min_strength))
 	var reached: Array = result.get("reached", [])
 	if use_ids:
 		result["reached_ids"] = _keys_to_ids(reached)
@@ -550,7 +599,7 @@ func _enforce_dunbar_limit(key) -> void:
 		idx += 1
 
 
-## Devuelve los N vecinos con mayor afinidad: Array de diccionarios { key, weight }.
+## Devuelve los N vecinos con mayor familiaridad: Array de diccionarios { key, weight }.
 func get_top_relations(npc_or_id, top_n := 3) -> Array:
 	var rels := get_relationships_for(npc_or_id)
 	var pairs: Array = []
@@ -560,7 +609,7 @@ func get_top_relations(npc_or_id, top_n := 3) -> Array:
 	return pairs.slice(0, int(top_n))
 
 
-## Devuelve claves de vecinos cuya afinidad supera (>=) el umbral.
+## Devuelve claves de vecinos cuya familiaridad supera (>=) el umbral.
 func get_friends_above(npc_or_id, threshold: float) -> Array:
 	var rels := get_relationships_for(npc_or_id)
 	var out: Array = []
@@ -570,7 +619,7 @@ func get_friends_above(npc_or_id, threshold: float) -> Array:
 	return out
 
 
-## Registra una interacción entre A y B y actualiza la afinidad.
+## Registra una interacción entre A y B y actualiza la familiaridad (peso del vínculo).
 ## Argumentos:
 ## - `a`, `b`: NPCs o ids.
 ## - `base_delta`: Delta base a sumar.
@@ -754,7 +803,7 @@ func serialize() -> Dictionary:
 		"metadata": {
 			"node_count": get_node_count(),
 			"edge_count": get_edge_count(),
-			"avg_affinity": GraphAlgo.average_affinity(self)
+			"avg_familiarity": GraphAlgorithms.average_affinity(self)
 		}
 	}
 

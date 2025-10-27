@@ -1,4 +1,4 @@
-extends "res://scripts/systems/NPCState.gd"
+extends NPCState
 class_name InteractState
 
 @export var duration: float = 1.5

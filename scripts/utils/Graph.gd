@@ -146,8 +146,9 @@ func get_node_count() -> int:
 ## Argumentos:
 ## - `a`: Nodo origen.
 ## - `b`: Nodo destino.
-## - `affinity`: Peso o afinidad de la conexión (no negativo).
-func add_connection(a, b, affinity: float) -> void:
+## - `weight`: Peso de la conexión (no negativo). En un grafo social este peso representa
+##   la familiaridad/conocimiento (tie strength) entre los actores en un rango sugerido [0..100].
+func add_connection(a, b, weight: float) -> void:
 	if a == b:
 		push_error("Graph.add_connection: cannot connect node to itself")
 		return
@@ -155,8 +156,8 @@ func add_connection(a, b, affinity: float) -> void:
 	ensure_node(a)
 	ensure_node(b)
 
-	if affinity < 0.0:
-		push_warning("Graph.add_connection: negative weight %f for %s-%s" % [affinity, a, b])
+	if weight < 0.0:
+		push_warning("Graph.add_connection: negative weight %f for %s-%s" % [weight, a, b])
 		remove_connection(a, b)
 		return
 	
@@ -164,12 +165,12 @@ func add_connection(a, b, affinity: float) -> void:
 	var vb: Vertex = vertices[b]
 	var edge: Edge = va.edges.get(b)
 	if edge == null:
-		edge = Edge.new(va, vb, affinity)
+		edge = Edge.new(va, vb, weight)
 		va.edges[b] = edge
 		vb.edges[a] = edge
 		emit_signal("edge_added", a, b)
 	else:
-		edge.weight = affinity
+		edge.weight = weight
 
 
 ## Conecta dos nodos, creando ambos si no existen.
@@ -256,7 +257,8 @@ func get_edges() -> Array:
 				out.append({
 					"source": e.endpoint_a.key,
 					"target": e.endpoint_b.key,
-					"weight": e.weight
+					"weight": e.weight,
+					"meta": e.meta.duplicate(true)
 				})
 	return out
 
@@ -276,6 +278,19 @@ func get_edge_count() -> int:
 func get_neighbor_weights(key) -> Dictionary:
 	var v: Vertex = vertices.get(key)
 	return v.get_neighbor_weights() if v else {}
+
+
+## Devuelve un diccionario { neighbor_key: atributo } leyendo de Edge.meta[field].
+## Si el atributo no existe, devuelve `default_value`.
+func get_neighbor_attribute_map(key, field: String, default_value: Variant = null) -> Dictionary:
+	var out: Dictionary = {}
+	var v: Vertex = vertices.get(key)
+	if v == null:
+		return out
+	for n in v.edges.keys():
+		var e: Edge = v.edges[n]
+		out[n] = e.meta.get(field, default_value) if e else default_value
+	return out
 
 
 ## Devuelve una lista de nodos vecinos conectados al nodo dado.
@@ -298,6 +313,18 @@ func set_vertex_meta(key, field, value):
 	var v = vertices.get(key)
 	if v:
 		v.meta[field] = value
+
+
+## Establece un atributo en la arista (Edge.meta[field] = value) entre `a` y `b`.
+func set_edge_attribute(a, b, field: String, value) -> void:
+	var e: Edge = get_edge_resource(a, b)
+	if e:
+		e.meta[field] = value
+
+## Obtiene un atributo de la arista entre `a` y `b`.
+func get_edge_attribute(a, b, field: String, default: Variant = null):
+	var e: Edge = get_edge_resource(a, b)
+	return e.meta.get(field, default) if e else default
 
 
 ## Obtiene un campo de metadata de un nodo.

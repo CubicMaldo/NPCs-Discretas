@@ -25,6 +25,7 @@ func _register_tests() -> void:
 	add_test(Callable(self, "_test_shortest_path"), "Shortest path uses Dijkstra")
 	add_test(Callable(self, "_test_mutual_connections"), "Mutual friend analytics")
 	add_test(Callable(self, "_test_rumor_propagation"), "Rumor propagation reaches neighbors")
+	add_test(Callable(self, "_test_strongest_path"), "Strongest path prefers high familiarity")
 
 
 func _test_npc_registration() -> Dictionary:
@@ -114,6 +115,22 @@ func _test_shortest_path() -> Dictionary:
 	if path_ids != [1, 2, 3]:
 		return make_result("Shortest path uses Dijkstra", false, "Unexpected path %s" % [str(path_ids)])
 	return assert_float_approx(2.0, float(result.get("distance", 0.0)), 0.01, "Shortest path uses Dijkstra")
+
+
+func _test_strongest_path() -> Dictionary:
+	var graph := SocialGraphClass.new()
+	# Direct edge weaker than via-two-steps chain
+	graph.connect_npcs(1, 2, 80.0)
+	graph.connect_npcs(2, 3, 90.0)
+	graph.connect_npcs(1, 3, 50.0)
+	var result: Dictionary = graph.get_strongest_path(1, 3)
+	if not result.get("reachable", false):
+		return make_result("Strongest path prefers high familiarity", false, "Nodes unreachable")
+	var path_ids: Array = result.get("path_ids", [])
+	if path_ids != [1, 2, 3]:
+		return make_result("Strongest path prefers high familiarity", false, "Unexpected path %s" % [str(path_ids)])
+	var expected_strength := 0.8 * 0.9
+	return assert_float_approx(expected_strength, float(result.get("strength", 0.0)), 0.01, "Strongest path prefers high familiarity")
 
 
 func _test_mutual_connections() -> Dictionary:
