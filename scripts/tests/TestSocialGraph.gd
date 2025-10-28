@@ -558,4 +558,3 @@ func _test_mutual_connection_helper() -> Dictionary:
 		return make_result("Mutual connection helper creates bidirectional edges", false, "Symmetric weights should both be 90.0")
 	
 	return make_result("Mutual connection helper creates bidirectional edges", true, "")
-

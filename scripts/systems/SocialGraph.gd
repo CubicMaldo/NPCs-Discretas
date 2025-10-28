@@ -170,16 +170,16 @@ func add_connection(a, b, familiarity: float) -> void:
 	super.add_connection(a, b, familiarity)
 	if has_edge(a, b):
 		var weight: float = float(get_edge(a, b))
-		_update_edge_indices(a, b, weight)
+		_update_edge_indices_directed(a, b, weight)
 	elif existed:
-		_remove_edge_indices(a, b)
+		_remove_edge_indices_directed(a, b)
 
 
 func remove_connection(a, b) -> void:
 	var existed := has_edge(a, b)
 	super.remove_connection(a, b)
 	if existed and not has_edge(a, b):
-		_remove_edge_indices(a, b)
+		_remove_edge_indices_directed(a, b)
 
 
 func _graph_key_from_input(input) -> Variant:
@@ -414,7 +414,6 @@ func connect_npcs(a, b, familiarity: float, meta_a := {}, meta_b := {}) -> void:
 	ensure_npc(a, meta_a)
 	ensure_npc(b, meta_b)
 	add_connection(key_a, key_b, familiarity)
-	_update_edge_indices_directed(key_a, key_b, familiarity)
 
 
 ## Conecta dos NPCs con relación bidireccional (ambos se conocen mutuamente).
@@ -441,8 +440,6 @@ func connect_npcs_mutual(a, b, familiarity_a_to_b: float, familiarity_b_to_a: Va
 	ensure_npc(b, meta_b)
 	add_connection(key_a, key_b, familiarity_a_to_b)
 	add_connection(key_b, key_a, fam_b_a)
-	_update_edge_indices_directed(key_a, key_b, familiarity_a_to_b)
-	_update_edge_indices_directed(key_b, key_a, fam_b_a)
 
 
 ## Establece explícitamente la familiaridad entre dos NPCs (alias canónico del peso).
@@ -502,7 +499,7 @@ func get_cached_neighbors(npc_or_id) -> Dictionary:
 	var key = _graph_key_from_input(npc_or_id)
 	if key == null:
 		return {}
-	var bucket: Dictionary = _adjacency_by_key.get(key)
+	var bucket = _adjacency_by_key.get(key)
 	return bucket.duplicate(true) if bucket else {}
 
 
@@ -516,7 +513,7 @@ func get_cached_neighbors_ids(npc_or_id) -> Dictionary:
 		resolved_id = int(npc_or_id)
 	if resolved_id == null:
 		return {}
-	var bucket: Dictionary = _adjacency_by_id.get(resolved_id)
+	var bucket = _adjacency_by_id.get(resolved_id)
 	return bucket.duplicate(true) if bucket else {}
 
 
