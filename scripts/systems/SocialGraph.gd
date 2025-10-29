@@ -8,7 +8,9 @@
 class_name SocialGraph
 extends Graph
 
-## Emitido cuando se registra una interacción y se actualiza la familiaridad (peso del vínculo).
+const GraphAlgo = preload("res://scripts/utils/GraphAlgorithms.gd")
+
+## Emitido cuando se registra una interacción y se actualiza la familiaridad.
 ## Emite las claves tal y como se almacenan en el grafo (NPC u id).
 signal interaction_registered(a_key, b_key, delta, new_weight)
 ## Variante opcional que emite ids enteros cuando es posible (puede emitir null si no hay npc_id).
@@ -165,21 +167,23 @@ func _to_id(entity_or_key):
 	return null
 
 
+## Sobrecarga add_connection para usar terminología específica del dominio social.
+## Internamente, convierte "familiarity" a "weight" para la clase base Graph.
 func add_connection(a, b, familiarity: float) -> void:
 	var existed := has_edge(a, b)
-	super.add_connection(a, b, familiarity)
+	super.add_connection(a, b, familiarity)  # familiarity se usa como weight en Graph
 	if has_edge(a, b):
 		var weight: float = float(get_edge(a, b))
-		_update_edge_indices_directed(a, b, weight)
+		_update_edge_indices(a, b, weight)
 	elif existed:
-		_remove_edge_indices_directed(a, b)
+		_remove_edge_indices(a, b)
 
 
 func remove_connection(a, b) -> void:
 	var existed := has_edge(a, b)
 	super.remove_connection(a, b)
 	if existed and not has_edge(a, b):
-		_remove_edge_indices_directed(a, b)
+		_remove_edge_indices(a, b)
 
 
 func _graph_key_from_input(input) -> Variant:
@@ -232,36 +236,6 @@ func _resolve_id_for_input(input, vertex: Vertex = null):
 	return null
 
 
-## Actualiza los índices del caché para una arista dirigida A→B.
-func _update_edge_indices_directed(key_a, key_b, weight: float) -> void:
-	if weight <= 0.0:
-		_remove_edge_indices_directed(key_a, key_b)
-		return
-	var vertex_a: Vertex = get_vertex(key_a)
-	var vertex_b: Vertex = get_vertex(key_b)
-	var actual_key_a = vertex_a.key if vertex_a else key_a
-	var actual_key_b = vertex_b.key if vertex_b else key_b
-	_update_directed_cache(_adjacency_by_key, actual_key_a, actual_key_b, weight)
-	var id_a = _resolve_id_for_input(actual_key_a, vertex_a)
-	var id_b = _resolve_id_for_input(actual_key_b, vertex_b)
-	if id_a != null and id_b != null:
-		_update_directed_cache(_adjacency_by_id, id_a, id_b, weight)
-
-
-## Elimina del caché una arista dirigida A→B.
-func _remove_edge_indices_directed(key_a, key_b) -> void:
-	var vertex_a: Vertex = get_vertex(key_a)
-	var vertex_b: Vertex = get_vertex(key_b)
-	var actual_key_a = vertex_a.key if vertex_a else key_a
-	var actual_key_b = vertex_b.key if vertex_b else key_b
-	_remove_directed_cache(_adjacency_by_key, actual_key_a, actual_key_b)
-	var id_a = _resolve_id_for_input(actual_key_a, vertex_a)
-	var id_b = _resolve_id_for_input(actual_key_b, vertex_b)
-	if id_a != null and id_b != null:
-		_remove_directed_cache(_adjacency_by_id, id_a, id_b)
-
-
-## Actualiza los índices del caché bidireccional (usado en código legacy).
 func _update_edge_indices(key_a, key_b, weight: float) -> void:
 	if weight <= 0.0:
 		_remove_edge_indices(key_a, key_b)
@@ -289,21 +263,6 @@ func _remove_edge_indices(key_a, key_b) -> void:
 		_remove_bidirectional_cache(_adjacency_by_id, id_a, id_b)
 
 
-## Actualiza el caché para una arista dirigida A→B
-func _update_directed_cache(store: Dictionary, from_key, to_key, weight: float) -> void:
-	if from_key == null or to_key == null:
-		return
-	_set_cache_entry(store, from_key, to_key, weight)
-
-
-## Elimina del caché una arista dirigida A→B
-func _remove_directed_cache(store: Dictionary, from_key, to_key) -> void:
-	if from_key == null or to_key == null:
-		return
-	_remove_cache_entry(store, from_key, to_key)
-
-
-## Actualiza el caché para ambas direcciones (bidireccional, usado en código legacy)
 func _update_bidirectional_cache(store: Dictionary, a_key, b_key, weight: float) -> void:
 	if a_key == null or b_key == null:
 		return
@@ -311,7 +270,6 @@ func _update_bidirectional_cache(store: Dictionary, a_key, b_key, weight: float)
 	_set_cache_entry(store, b_key, a_key, weight)
 
 
-## Elimina del caché ambas direcciones (bidireccional, usado en código legacy)
 func _remove_bidirectional_cache(store: Dictionary, a_key, b_key) -> void:
 	if a_key == null or b_key == null:
 		return
@@ -394,79 +352,36 @@ func _rekey_cache_entry(old_key, new_key) -> void:
 		bucket[new_key] = weight
 
 
-## Conecta dos NPCs con una arista dirigida (A conoce a B).
-## [br]
-## IMPORTANTE: Esto es una arista dirigida. Si quieres una relación bidireccional
-## (ambos se conocen), usa `connect_npcs_mutual()` en su lugar.
-## [br]
+## Conecta dos NPCs (o ids) con un peso (conexión unidireccional A→B).
 ## Argumentos:
-## - `a`: NPC origen o id.
-## - `b`: NPC destino o id.
-## - `familiarity`: Peso de la familiaridad/conocimiento que A tiene de B [0..100].
-## - `meta_a`: Metadata opcional para el nodo A.
-## - `meta_b`: Metadata opcional para el nodo B.
-func connect_npcs(a, b, familiarity: float, meta_a := {}, meta_b := {}) -> void:
-	var key_a = _graph_key_from_input(a)
-	var key_b = _graph_key_from_input(b)
-	if key_a == null or key_b == null:
-		push_error("SocialGraph.connect_npcs: invalid input")
+## - `a`, `b`: Objetos NPC o ids enteros.
+## - `familiarity`: Nivel de familiaridad a asignar (qué tan bien se conocen).
+## - `meta_a`, `meta_b`: Metadata para cada nodo, si se crean.
+func connect_npcs(a, b, familiarity := 1.0, meta_a := {}, meta_b := {}) -> void:
+	if a == b:
 		return
-	ensure_npc(a, meta_a)
-	ensure_npc(b, meta_b)
-	add_connection(key_a, key_b, familiarity)
+	var vertex_a: Vertex = ensure_npc(a, meta_a)
+	var vertex_b: Vertex = ensure_npc(b, meta_b)
+	var key_a = vertex_a.key if vertex_a else _normalize_key(a)
+	var key_b = vertex_b.key if vertex_b else _normalize_key(b)
+	add_connection(key_a, key_b, float(familiarity))
+	_enforce_dunbar_limit(key_a)
+	_enforce_dunbar_limit(key_b)
 
 
-## Conecta dos NPCs con relación bidireccional (ambos se conocen mutuamente).
-## [br]
-## Crea dos aristas dirigidas: A→B y B→A con los pesos especificados.
-## [br]
+## Conecta dos NPCs con una relación bidireccional (A↔B).
+## Crea ambas aristas con los pesos especificados.
 ## Argumentos:
-## - `a`: NPC origen o id.
-## - `b`: NPC destino o id.
-## - `familiarity_a_to_b`: Familiaridad que A tiene de B [0..100].
-## - `familiarity_b_to_a`: Familiaridad que B tiene de A [0..100]. Si es `null`, usa el mismo valor que A→B.
-## - `meta_a`: Metadata opcional para el nodo A.
-## - `meta_b`: Metadata opcional para el nodo B.
-func connect_npcs_mutual(a, b, familiarity_a_to_b: float, familiarity_b_to_a: Variant = null, meta_a := {}, meta_b := {}) -> void:
-	var key_a = _graph_key_from_input(a)
-	var key_b = _graph_key_from_input(b)
-	if key_a == null or key_b == null:
-		push_error("SocialGraph.connect_npcs_mutual: invalid input")
+## - `a`, `b`: Objetos NPC o ids enteros.
+## - `familiarity_a_to_b`: Familiaridad de A hacia B (qué tan bien A conoce a B).
+## - `familiarity_b_to_a`: Familiaridad de B hacia A. Si es null, usa el mismo valor que A→B.
+## - `meta_a`, `meta_b`: Metadata para cada nodo, si se crean.
+func connect_npcs_mutual(a, b, familiarity_a_to_b := 1.0, familiarity_b_to_a: Variant = null, meta_a := {}, meta_b := {}) -> void:
+	if a == b:
 		return
-	
-	var fam_b_a := familiarity_a_to_b if familiarity_b_to_a == null else float(familiarity_b_to_a)
-	
-	ensure_npc(a, meta_a)
-	ensure_npc(b, meta_b)
-	add_connection(key_a, key_b, familiarity_a_to_b)
-	add_connection(key_b, key_a, fam_b_a)
-
-
-## Establece explícitamente la familiaridad entre dos NPCs (alias canónico del peso).
-## Crea una arista dirigida A→B.
-func set_familiarity(a, b, weight: float) -> void:
-	connect_npcs(a, b, weight)
-
-## [DEPRECATED] Mantenido por compatibilidad. Usa `set_familiarity`.
-func set_affinity(a, b, weight: float) -> void:
-	set_familiarity(a, b, weight)
-
-## Establece explícitamente la hostilidad entre dos NPCs (0..100 por convención).
-func set_hostility(a, b, hostility: float) -> void:
-	var ka = _normalize_key(a)
-	var kb = _normalize_key(b)
-	if ka == null or kb == null:
-		return
-	# Asegura que exista la arista con alguna familiaridad (0.0 si no estaba)
-	if not has_edge(ka, kb):
-		add_connection(ka, kb, 0.0)
-	set_edge_attribute(ka, kb, "hostility", float(hostility))
-
-## Obtiene la hostilidad entre dos NPCs.
-func get_hostility(a, b, default := 0.0) -> float:
-	var ka = _normalize_key(a)
-	var kb = _normalize_key(b)
-	return float(get_edge_attribute(ka, kb, "hostility", default))
+	var fam_ba: float = familiarity_b_to_a if familiarity_b_to_a != null else familiarity_a_to_b
+	connect_npcs(a, b, familiarity_a_to_b, meta_a, meta_b)
+	connect_npcs(b, a, fam_ba, meta_b, meta_a)
 
 
 ## Elimina la relación (si existe) entre dos NPCs.
@@ -476,7 +391,7 @@ func break_relationship(a, b) -> void:
 	remove_connection(ka, kb)
 
 
-## Devuelve las relaciones (clave -> familiaridad) de un NPC.
+## Devuelve las relaciones (id -> familiaridad) de un NPC.
 ## Si las claves vecinas no son enteras, intenta normalizarlas a `npc_id`.
 func get_relationships_for(npc_or_id) -> Dictionary:
 	var k = _normalize_key(npc_or_id)
@@ -499,7 +414,7 @@ func get_cached_neighbors(npc_or_id) -> Dictionary:
 	var key = _graph_key_from_input(npc_or_id)
 	if key == null:
 		return {}
-	var bucket = _adjacency_by_key.get(key)
+	var bucket: Dictionary = _adjacency_by_key.get(key)
 	return bucket.duplicate(true) if bucket else {}
 
 
@@ -513,7 +428,7 @@ func get_cached_neighbors_ids(npc_or_id) -> Dictionary:
 		resolved_id = int(npc_or_id)
 	if resolved_id == null:
 		return {}
-	var bucket = _adjacency_by_id.get(resolved_id)
+	var bucket: Dictionary = _adjacency_by_id.get(resolved_id)
 	return bucket.duplicate(true) if bucket else {}
 
 
@@ -542,37 +457,7 @@ func get_shortest_path(a, b) -> Dictionary:
 			"path": [],
 			"path_ids": []
 		}
-	var result: Dictionary = GraphAlgorithms.shortest_path(self, key_a, key_b)
-	var path: Array = result.get("path", [])
-	result["path_ids"] = _keys_to_ids(path)
-	return result
-
-
-## Calcula el camino más fuerte entre dos actores usando el algoritmo de propagación de fuerza.
-## El camino más fuerte maximiza el producto de las familiaridades normalizadas (0..1).
-## Retorna un diccionario con:
-## - reachable: bool indicando si hay camino.
-## - strength: float con el producto de familiaridades del mejor camino.
-## - path: Array de claves del camino encontrado.
-## - path_ids: Array de ids enteros del camino (cuando es posible).
-func get_strongest_path(a, b) -> Dictionary:
-	var key_a = _graph_key_from_input(a)
-	var key_b = _graph_key_from_input(b)
-	if key_a == null or key_b == null:
-		return {
-			"reachable": false,
-			"strength": 0.0,
-			"path": [],
-			"path_ids": []
-		}
-	if not has_vertex(key_a) or not has_vertex(key_b):
-		return {
-			"reachable": false,
-			"strength": 0.0,
-			"path": [],
-			"path_ids": []
-		}
-	var result: Dictionary = GraphAlgorithms.strongest_path(self, key_a, key_b)
+	var result: Dictionary = GraphAlgo.shortest_path(self, key_a, key_b)
 	var path: Array = result.get("path", [])
 	result["path_ids"] = _keys_to_ids(path)
 	return result
@@ -597,7 +482,7 @@ func get_mutual_connections(a, b, min_weight := 0.0) -> Dictionary:
 			"jaccard_index": 0.0,
 			"entries_ids": []
 		}
-	var result: Dictionary = GraphAlgorithms.mutual_metrics(self, key_a, key_b, float(min_weight))
+	var result: Dictionary = GraphAlgo.mutual_metrics(self, key_a, key_b, float(min_weight))
 	var entries: Array = result.get("entries", [])
 	result["entries_ids"] = _convert_entries_neighbors_to_ids(entries)
 	return result
@@ -614,7 +499,7 @@ func simulate_rumor(seed_actor, steps := 3, attenuation := 0.6, min_strength := 
 			"reached_ids": [] if use_ids else [],
 			"influence_ids": {} if use_ids else {}
 		}
-	var result: Dictionary = GraphAlgorithms.propagate_rumor(self, seed_key, int(steps), float(attenuation), float(min_strength))
+	var result: Dictionary = GraphAlgo.propagate_rumor(self, seed_key, int(steps), float(attenuation), float(min_strength))
 	var reached: Array = result.get("reached", [])
 	if use_ids:
 		result["reached_ids"] = _keys_to_ids(reached)
@@ -697,7 +582,7 @@ func get_friends_above(npc_or_id, threshold: float) -> Array:
 	return out
 
 
-## Registra una interacción entre A y B y actualiza la familiaridad (peso del vínculo).
+## Registra una interacción entre A y B y actualiza la familiaridad.
 ## Argumentos:
 ## - `a`, `b`: NPCs o ids.
 ## - `base_delta`: Delta base a sumar.
@@ -881,7 +766,7 @@ func serialize() -> Dictionary:
 		"metadata": {
 			"node_count": get_node_count(),
 			"edge_count": get_edge_count(),
-			"avg_familiarity": GraphAlgorithms.average_affinity(self)
+			"avg_familiarity": GraphAlgo.average_weight(self)
 		}
 	}
 
@@ -965,11 +850,9 @@ func deserialize(data: Dictionary) -> bool:
 
 
 ## Guarda el grafo en disco en formato JSON opcionalmente comprimido.
-## Los archivos sin comprimir se formatean con indentación para mejor legibilidad.
 func save_to_file(path: String, compressed := true) -> Error:
 	var data := serialize()
-	# Usar indentación solo para archivos no comprimidos (mejor legibilidad)
-	var json := JSON.stringify(data, "\t") if not compressed else JSON.stringify(data)
+	var json := JSON.stringify(data)
 	var file: FileAccess
 	if compressed:
 		file = FileAccess.open_compressed(path, FileAccess.WRITE, FileAccess.COMPRESSION_GZIP)
@@ -983,37 +866,21 @@ func save_to_file(path: String, compressed := true) -> Error:
 	return OK
 
 
-## Carga el grafo desde disco, detectando automáticamente compresión por extensión.
+## Carga el grafo desde disco, detectando automáticamente compresión.
 func load_from_file(path: String) -> Error:
-	var file: FileAccess
+	var file := FileAccess.open(path, FileAccess.READ)
+	var err := FileAccess.get_open_error()
 	var text := ""
-	var err: Error
-	
-	# Detectar compresión por extensión del archivo
-	var is_compressed := path.ends_with(".gz") or path.ends_with(".gzip")
-	
-	if is_compressed:
+	if err == OK and file:
+		text = file.get_as_text()
+		file.close()
+	else:
 		file = FileAccess.open_compressed(path, FileAccess.READ, FileAccess.COMPRESSION_GZIP)
 		err = FileAccess.get_open_error()
 		if err != OK or file == null:
 			return err
 		text = file.get_as_text()
 		file.close()
-	else:
-		file = FileAccess.open(path, FileAccess.READ)
-		err = FileAccess.get_open_error()
-		if err != OK or file == null:
-			# Intentar como comprimido si falla la lectura normal
-			file = FileAccess.open_compressed(path, FileAccess.READ, FileAccess.COMPRESSION_GZIP)
-			err = FileAccess.get_open_error()
-			if err != OK or file == null:
-				return err
-			text = file.get_as_text()
-			file.close()
-		else:
-			text = file.get_as_text()
-			file.close()
-	
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return ERR_PARSE_ERROR

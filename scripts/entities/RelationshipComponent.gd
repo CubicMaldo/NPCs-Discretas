@@ -61,29 +61,29 @@ func store_relationship(partner, relationship: Relationship) -> void:
 	if relationship == null or k == null or owner_key == null:
 		return
 	var stored: Relationship = relationship.duplicate(true)
-	if stored.affinity < break_threshold:
+	if stored.familiarity < break_threshold:
 		break_relationship(k)
 		return
 	stored.partner_id = _partner_id_from_key(k)
 	relationships[k] = stored
-	_update_graph_affinity(k, stored.affinity)
+	_update_graph_familiarity(k, stored.familiarity)
 
 # Adds or overwrites a relationship entry and synchronizes the global graph.
-func add_relationship(partner, affinity: float) -> void:
+func add_relationship(partner, familiarity: float) -> void:
 	var k = _partner_key_for(partner)
 	var owner_key = _owner_key()
 	if k == null or owner_key == null:
 		return
-	if affinity < break_threshold:
+	if familiarity < break_threshold:
 		if social_graph_manager:
 			social_graph_manager.remove_connection(owner_key, k)
 		return
-	var relationship: Relationship = _instantiate_relationship(k, affinity)
+	var relationship: Relationship = _instantiate_relationship(k, familiarity)
 	relationships[k] = relationship
-	_update_graph_affinity(k, affinity)
+	_update_graph_familiarity(k, familiarity)
 
-# Adjusts affinity for an existing relationship and breaks it if it crosses the threshold.
-func update_affinity(partner, delta: float) -> void:
+# Adjusts familiarity for an existing relationship and breaks it if it crosses the threshold.
+func update_familiarity(partner, delta: float) -> void:
 	var k = _partner_key_for(partner)
 	if k == null:
 		return
@@ -93,11 +93,11 @@ func update_affinity(partner, delta: float) -> void:
 		add_relationship(k, delta)
 		return
 	var relationship: Relationship = relationships[k]
-	relationship.affinity += delta
-	if relationship.affinity < break_threshold:
+	relationship.familiarity += delta
+	if relationship.familiarity < break_threshold:
 		break_relationship(k)
 		return
-	_update_graph_affinity(k, relationship.affinity)
+	_update_graph_familiarity(k, relationship.familiarity)
 
 # Removes the relationship, updates the graph, and emits a signal for listeners.
 func break_relationship(partner) -> void:
@@ -126,23 +126,23 @@ func _refresh_from_graph() -> void:
 		var relationship: Relationship = _instantiate_relationship(partner_id, graph_snapshot[partner_id])
 		relationships[partner_id] = relationship
 
-func _instantiate_relationship(partner_key, affinity: float) -> Relationship:
+func _instantiate_relationship(partner_key, familiarity: float) -> Relationship:
 	var relationship: Relationship
 	if default_relationship_template:
 		relationship = default_relationship_template.duplicate(true)
 	else:
 		relationship = Relationship.new()
 	relationship.partner_id = _partner_id_from_key(partner_key)
-	relationship.affinity = affinity
+	relationship.familiarity = familiarity
 	return relationship
 
-func _update_graph_affinity(partner_key, affinity: float) -> void:
+func _update_graph_familiarity(partner_key, familiarity: float) -> void:
 	if not social_graph_manager:
 		return
-	if affinity < break_threshold:
+	if familiarity < break_threshold:
 		break_relationship(partner_key)
 		return
 	var owner_key = _owner_key()
 	if owner_key == null:
 		return
-	social_graph_manager.add_connection(owner_key, partner_key, affinity)
+	social_graph_manager.add_connection(owner_key, partner_key, familiarity)

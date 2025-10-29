@@ -12,9 +12,10 @@ var endpoint_b: Vertex = null
 ## Nota de dominio: en el grafo social este valor representa la familiaridad/conocimiento
 ## que A tiene de B (tie strength), típicamente en un rango [0..100].
 var weight: float = 0.0
-## Atributos adicionales de la arista (multi-atributo):
-## Ej.: { "hostility": float, "respect": float, ... }
-var meta: Dictionary = {}
+## Metadata adicional de la arista como Resource genérico.
+## Acepta cualquier tipo de Resource para mantener Graph.gd domain-agnostic.
+## Ej.: EdgeMetadata (para NPCs), PathMetadata (para pathfinding), etc.
+var metadata: Resource = null
 
 
 ## Inicializa la arista.
@@ -23,11 +24,12 @@ var meta: Dictionary = {}
 ## - `_a`: Vértice extremo A.
 ## - `_b`: Vértice extremo B.
 ## - `_weight`: Peso inicial (float).
-func _init(_a: Vertex = null, _b: Vertex = null, _weight: float = 0.0, _meta: Dictionary = {}):
+## - `_metadata`: Resource opcional con metadata de la arista.
+func _init(_a: Vertex = null, _b: Vertex = null, _weight: float = 0.0, _metadata: Resource = null):
 	endpoint_a = _a
 	endpoint_b = _b
 	weight = _weight
-	meta = _meta.duplicate(true) if _meta else {}
+	metadata = _metadata
 
 
 ## Devuelve un Array con los dos vértices extremos: [endpoint_a, endpoint_b].
