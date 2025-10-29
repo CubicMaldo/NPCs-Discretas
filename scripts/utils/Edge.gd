@@ -1,21 +1,13 @@
-## Representa una arista dirigida entre dos `Vertex`.
-## endpoint_a es el origen (fuente) y endpoint_b es el destino.
-## Nota de dominio: en el grafo social el peso representa la familiaridad/conocimiento
-## que endpoint_a tiene de endpoint_b (tie strength), típicamente [0..100].
+## Representa una arista no dirigida entre dos `Vertex`.
+## Nombres neutrales (`endpoint_a`/`endpoint_b`) evitan implicar dirección.
 class_name Edge
 
-## Vértice extremo A (origen/fuente en arista dirigida).
+## Vértice extremo A.
 var endpoint_a: Vertex = null
-## Vértice extremo B (destino en arista dirigida).
+## Vértice extremo B.
 var endpoint_b: Vertex = null
-## Peso de la arista dirigida (de A hacia B).
-## Nota de dominio: en el grafo social este valor representa la familiaridad/conocimiento
-## que A tiene de B (tie strength), típicamente en un rango [0..100].
+## Peso de la arista.
 var weight: float = 0.0
-## Metadata adicional de la arista como Resource genérico.
-## Acepta cualquier tipo de Resource para mantener Graph.gd domain-agnostic.
-## Ej.: EdgeMetadata (para NPCs), PathMetadata (para pathfinding), etc.
-var metadata: Resource = null
 
 
 ## Inicializa la arista.
@@ -24,12 +16,10 @@ var metadata: Resource = null
 ## - `_a`: Vértice extremo A.
 ## - `_b`: Vértice extremo B.
 ## - `_weight`: Peso inicial (float).
-## - `_metadata`: Resource opcional con metadata de la arista.
-func _init(_a: Vertex = null, _b: Vertex = null, _weight: float = 0.0, _metadata: Resource = null):
+func _init(_a: Vertex = null, _b: Vertex = null, _weight: float = 0.0):
 	endpoint_a = _a
 	endpoint_b = _b
 	weight = _weight
-	metadata = _metadata
 
 
 ## Devuelve un Array con los dos vértices extremos: [endpoint_a, endpoint_b].
