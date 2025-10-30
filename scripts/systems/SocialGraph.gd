@@ -169,9 +169,17 @@ func _to_id(entity_or_key):
 
 ## Sobrecarga add_connection para usar terminología específica del dominio social.
 ## Internamente, convierte "familiarity" a "weight" para la clase base Graph.
-func add_connection(a, b, familiarity: float) -> void:
+func add_connection(a, b, familiarity: float, edge_metadata: Resource = null) -> void:
 	var existed := has_edge(a, b)
-	super.add_connection(a, b, familiarity)  # familiarity se usa como weight en Graph
+	
+	# Crear EdgeMetadata por defecto si no se proporciona o no es EdgeMetadata
+	var meta: EdgeMetadata = null
+	if edge_metadata != null and edge_metadata is EdgeMetadata:
+		meta = edge_metadata as EdgeMetadata
+	else:
+		meta = EdgeMetadata.new()
+	
+	super.add_connection(a, b, familiarity, meta)  # familiarity se usa como weight en Graph
 	if has_edge(a, b):
 		var weight: float = float(get_edge(a, b))
 		_update_edge_indices(a, b, weight)
@@ -356,15 +364,15 @@ func _rekey_cache_entry(old_key, new_key) -> void:
 ## Argumentos:
 ## - `a`, `b`: Objetos NPC o ids enteros.
 ## - `familiarity`: Nivel de familiaridad a asignar (qué tan bien se conocen).
-## - `meta_a`, `meta_b`: Metadata para cada nodo, si se crean.
-func connect_npcs(a, b, familiarity := 1.0, meta_a := {}, meta_b := {}) -> void:
+## - `edge_metadata`: EdgeMetadata opcional para la arista.
+func connect_npcs(a, b, familiarity: float, edge_metadata: EdgeMetadata = null) -> void:
 	if a == b:
 		return
-	var vertex_a: Vertex = ensure_npc(a, meta_a)
-	var vertex_b: Vertex = ensure_npc(b, meta_b)
+	var vertex_a: Vertex = ensure_npc(a)
+	var vertex_b: Vertex = ensure_npc(b)
 	var key_a = vertex_a.key if vertex_a else _normalize_key(a)
 	var key_b = vertex_b.key if vertex_b else _normalize_key(b)
-	add_connection(key_a, key_b, float(familiarity))
+	add_connection(key_a, key_b, float(familiarity), edge_metadata)
 	_enforce_dunbar_limit(key_a)
 	_enforce_dunbar_limit(key_b)
 
@@ -375,13 +383,14 @@ func connect_npcs(a, b, familiarity := 1.0, meta_a := {}, meta_b := {}) -> void:
 ## - `a`, `b`: Objetos NPC o ids enteros.
 ## - `familiarity_a_to_b`: Familiaridad de A hacia B (qué tan bien A conoce a B).
 ## - `familiarity_b_to_a`: Familiaridad de B hacia A. Si es null, usa el mismo valor que A→B.
-## - `meta_a`, `meta_b`: Metadata para cada nodo, si se crean.
-func connect_npcs_mutual(a, b, familiarity_a_to_b := 1.0, familiarity_b_to_a: Variant = null, meta_a := {}, meta_b := {}) -> void:
+## - `edge_metadata_a_to_b`: EdgeMetadata opcional para la arista A→B.
+## - `edge_metadata_b_to_a`: EdgeMetadata opcional para la arista B→A.
+func connect_npcs_mutual(a, b, familiarity_a_to_b: float, familiarity_b_to_a: Variant = null, edge_metadata_a_to_b: EdgeMetadata = null, edge_metadata_b_to_a: EdgeMetadata = null) -> void:
 	if a == b:
 		return
 	var fam_ba: float = familiarity_b_to_a if familiarity_b_to_a != null else familiarity_a_to_b
-	connect_npcs(a, b, familiarity_a_to_b, meta_a, meta_b)
-	connect_npcs(b, a, fam_ba, meta_b, meta_a)
+	connect_npcs(a, b, familiarity_a_to_b, edge_metadata_a_to_b)
+	connect_npcs(b, a, fam_ba, edge_metadata_b_to_a)
 
 
 ## Elimina la relación (si existe) entre dos NPCs.

@@ -147,7 +147,8 @@ func get_node_count() -> int:
 ## - `a`: Nodo origen.
 ## - `b`: Nodo destino.
 ## - `weight`: Peso de la conexión (debe ser positivo).
-func add_connection(a, b, weight: float) -> void:
+## - `edge_metadata`: Resource opcional con metadata de la arista.
+func add_connection(a, b, weight: float, edge_metadata: Resource = null) -> void:
 	if a == b:
 		push_error("Graph.add_connection: cannot connect node to itself")
 		return
@@ -164,12 +165,14 @@ func add_connection(a, b, weight: float) -> void:
 	var vb: Vertex = vertices[b]
 	var edge: Edge = va.edges.get(b)
 	if edge == null:
-		edge = Edge.new(va, vb, weight)
+		edge = Edge.new(va, vb, weight, edge_metadata)
 		va.edges[b] = edge
 		vb.edges[a] = edge
 		emit_signal("edge_added", a, b)
 	else:
 		edge.weight = weight
+		if edge_metadata != null:
+			edge.metadata = edge_metadata
 
 
 ## Conecta dos nodos, creando ambos si no existen.
@@ -180,10 +183,11 @@ func add_connection(a, b, weight: float) -> void:
 ## - `weight`: Peso de la conexión (por defecto 1.0).
 ## - `meta_a`: Metadata opcional para el nodo A.
 ## - `meta_b`: Metadata opcional para el nodo B.
-func connect_vertices(a, b, weight := 1.0, meta_a := {}, meta_b := {}) -> void:
+## - `edge_metadata`: Resource opcional con metadata de la arista.
+func connect_vertices(a, b, weight := 1.0, meta_a := {}, meta_b := {}, edge_metadata: Resource = null) -> void:
 	ensure_node(a, meta_a)
 	ensure_node(b, meta_b)
-	add_connection(a, b, weight)
+	add_connection(a, b, weight, edge_metadata)
 
 
 ## Elimina la arista entre dos nodos si existe.

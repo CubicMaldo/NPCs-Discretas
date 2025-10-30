@@ -203,20 +203,21 @@ func example_7_rumor_propagation() -> void:
 	graph.connect_npcs("Bob", "Eve", 70.0)
 	
 	# Simular rumor desde Alice
-	var result = graph.simulate_rumor("Alice", 3, 0.7, 0.05)
-	
+	var result: Dictionary = graph.simulate_rumor("Alice", 3, 0.7, 0.05)
+
 	print("Rumor iniciado por Alice:")
-	print("  Nodos alcanzados: ", result.reached)
-	
+	print("  Nodos alcanzados: ", result.get("reached", []))
+
 	# Mostrar influencia en cada nodo
-	for node in result.influence:
-		var influence = result.influence[node]
+	var influence_map: Dictionary = result.get("influence", {})
+	for node in influence_map:
+		var influence = influence_map[node]
 		print("  ", node, ": ", "%.2f" % influence, " (", "%.0f" % (influence * 100), "%)")
 	
 	# El rumor NO se propaga hacia atrás
 	# Si Dave inicia el rumor, NO alcanza a Alice
-	var reverse_result = graph.simulate_rumor("Dave", 3, 0.7, 0.05)
-	print("Rumor iniciado por Dave alcanza a Alice: ", "Alice" in reverse_result.reached)  # false
+	var reverse_result: Dictionary = graph.simulate_rumor("Dave", 3, 0.7, 0.05)
+	print("Rumor iniciado por Dave alcanza a Alice: ", "Alice" in (reverse_result.get("reached", [])))  # false
 
 
 ## Ejemplo 8: Camino más corto en grafo dirigido

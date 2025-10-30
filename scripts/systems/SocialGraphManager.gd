@@ -15,44 +15,64 @@ func _ready() -> void:
 	social_graph.interaction_registered.connect(_on_interaction_registered)
 	social_graph.interaction_registered_ids.connect(_on_interaction_registered_ids)
 
-## Asegura que un NPC (objeto o id) exista en el grafo, propagando metadata opcional.
-func ensure_npc(npc_or_id, meta: Dictionary = {}) -> void:
-	social_graph.ensure_npc(npc_or_id, meta)
+## Asegura que un NPC (objeto o id) exista en el grafo.
+func ensure_npc(npc_or_id) -> void:
+	social_graph.ensure_npc(npc_or_id)
 
 ## Registra una interacción delegando en el grafo social (objeto-first, ids opcionales).
 func register_interaction(a, b, base_delta := 0.0, options: Dictionary = {}) -> void:
 	social_graph.register_interaction(a, b, base_delta, options)
 
-## Conecta dos NPCs/ids con un peso (conexión unidireccional A→B).
+## Conecta dos NPCs/ids con una arista dirigida A→B.
+## [br]
+## IMPORTANTE: Esto crea una conexión unidireccional. Si necesitas una relación bidireccional,
+## usa `add_connection_mutual()` en su lugar.
 ## [br]
 ## Parámetros:
 ## - a: NPC origen (objeto o id).
 ## - b: NPC destino (objeto o id).
-## - familiarity: Nivel de familiaridad (qué tan bien A conoce a B).
-## - meta_a, meta_b: Metadata opcional para los nodos.
-func add_connection(a, b, familiarity: float, meta_a := {}, meta_b := {}) -> void:
-	social_graph.connect_npcs(a, b, familiarity, meta_a, meta_b)
+## - affinity: Familiaridad/conocimiento que A tiene de B [0..100].
+## - edge_metadata: Metadata opcional de tipo EdgeMetadata para la arista.
+func add_connection(a, b, affinity: float, edge_metadata: EdgeMetadata = null) -> void:
+	social_graph.connect_npcs(a, b, affinity, edge_metadata)
 
 
-## Conecta dos NPCs/ids con una relación bidireccional (A↔B).
+## Conecta dos NPCs/ids con una relación bidireccional (ambos se conocen mutuamente).
 ## [br]
 ## Crea dos aristas dirigidas: A→B y B→A con los pesos especificados.
 ## [br]
 ## Parámetros:
 ## - a, b: NPCs (objetos o ids) a conectar.
-## - familiarity_a_to_b: Familiaridad de A hacia B (qué tan bien A conoce a B).
-## - familiarity_b_to_a: Familiaridad de B hacia A. Si es `null`, usa el mismo valor que A→B.
-## - meta_a, meta_b: Metadata opcional para los nodos.
-func add_connection_mutual(a, b, familiarity_a_to_b: float, familiarity_b_to_a: Variant = null, meta_a := {}, meta_b := {}) -> void:
-	social_graph.connect_npcs_mutual(a, b, familiarity_a_to_b, familiarity_b_to_a, meta_a, meta_b)
+## - affinity_a_to_b: Familiaridad que A tiene de B [0..100].
+## - affinity_b_to_a: Familiaridad que B tiene de A [0..100]. Si es `null`, usa el mismo valor que A→B.
+## - edge_metadata_a_to_b: Metadata opcional para la arista A→B.
+## - edge_metadata_b_to_a: Metadata opcional para la arista B→A.
+func add_connection_mutual(a, b, affinity_a_to_b: float, affinity_b_to_a: Variant = null, edge_metadata_a_to_b: EdgeMetadata = null, edge_metadata_b_to_a: EdgeMetadata = null) -> void:
+	social_graph.connect_npcs_mutual(a, b, affinity_a_to_b, affinity_b_to_a, edge_metadata_a_to_b, edge_metadata_b_to_a)
 
-## Elimina la relación entre dos actores si existe.
+## Elimina la arista dirigida entre dos actores si existe.
+## [br]
+## IMPORTANTE: En un grafo dirigido, esto solo elimina la arista en la dirección especificada (A→B).
+## Para eliminar ambas direcciones en una relación bidireccional, llama al método dos veces invirtiendo los parámetros.
 func remove_connection(a, b) -> void:
 	social_graph.break_relationship(a, b)
 
 ## Elimina un NPC o id del grafo.
 func remove_npc(npc_or_id) -> void:
 	social_graph.remove_npc(npc_or_id)
+
+## Establece explícitamente la familiaridad (peso del vínculo social) de manera dirigida.
+## [br]
+## IMPORTANTE: Esto crea/actualiza una arista dirigida A→B. Para relaciones bidireccionales,
+## establece la familiaridad en ambas direcciones por separado.
+func set_familiarity(a, b, familiarity: float) -> void:
+	social_graph.set_familiarity(a, b, familiarity)
+
+## Establece hostilidad explícitamente (arista dirigida).
+## [br]
+## IMPORTANTE: Esto crea/actualiza una arista dirigida A→B con el valor de hostilidad.
+func set_hostility(a, b, hostility: float) -> void:
+	social_graph.set_hostility(a, b, hostility)
 
 ## Comprueba si la relación está por encima de un umbral.
 func has_relationship_at_least(a, b, threshold: float) -> bool:
@@ -62,11 +82,20 @@ func has_relationship_at_least(a, b, threshold: float) -> bool:
 func break_if_below(a, b, threshold: float) -> bool:
 	return social_graph.break_if_below(a, b, threshold)
 
-## Devuelve relaciones usando las claves almacenadas (objetos o ids).
+## Obtiene la familiaridad actual que A tiene de B (o `default` si no hay arista A→B).
+## [br]
+## IMPORTANTE: En un grafo dirigido, esto devuelve el peso de la arista A→B únicamente.
+## La arista B→A puede tener un peso diferente o no existir.
+func get_familiarity(a, b, default := 0.0) -> float:
+	return social_graph.get_familiarity(a, b, default)
+
+## Devuelve relaciones (aristas salientes) usando las claves almacenadas (objetos o ids).
+## [br]
+## IMPORTANTE: Solo devuelve las aristas SALIENTES desde el nodo especificado.
 func get_relationships_for(key) -> Dictionary:
 	return social_graph.get_relationships_for(key)
 
-## Variante que intenta mapear a ids donde sea posible.
+## Variante que intenta mapear a ids donde sea posible (solo aristas salientes).
 func get_relationships_for_ids(key) -> Dictionary:
 	return social_graph.get_relationships_for_ids(key)
 
@@ -91,17 +120,40 @@ func get_cached_degree(key) -> int:
 func get_cached_degree_ids(key) -> int:
 	return social_graph.get_cached_degree_ids(key)
 
-## Busca el camino más corto entre dos actores.
+## Busca el camino dirigido más corto entre dos actores usando Dijkstra.
+## [br]
+## IMPORTANTE: Solo encuentra caminos que sigan las aristas en su dirección correcta (A→B).
 func get_shortest_path(a, b) -> Dictionary:
 	return social_graph.get_shortest_path(a, b)
 
-## Encuentra conexiones mutuas entre dos actores.
+## Variante robusta con Bellman-Ford (soporta pesos negativos en grafo dirigido).
+func get_shortest_path_robust(a, b) -> Dictionary:
+	return social_graph.get_shortest_path_robust(a, b)
+
+## Busca el camino dirigido más fuerte (máxima confianza acumulada).
+## [br]
+## IMPORTANTE: Busca el mejor camino siguiendo solo aristas dirigidas desde A hasta B.
+func get_strongest_path(a, b) -> Dictionary:
+	return social_graph.get_strongest_path(a, b)
+
+## Encuentra amigos mutuos (vecinos salientes que ambos actores conocen).
+## [br]
+## IMPORTANTE: Busca nodos que tanto A como B tienen aristas salientes hacia ellos.
 func get_mutual_connections(a, b, min_weight := 0.0) -> Dictionary:
 	return social_graph.get_mutual_connections(a, b, min_weight)
 
-## Simula propagación de rumor desde el actor semilla.
+## Simula propagación de rumor siguiendo aristas dirigidas desde el actor semilla.
+## [br]
+## IMPORTANTE: El rumor solo se propaga en la dirección de las aristas (A→B).
 func simulate_rumor(seed_actor, steps := 3, attenuation := 0.6, min_strength := 0.05, use_ids := true) -> Dictionary:
 	return social_graph.simulate_rumor(seed_actor, steps, attenuation, min_strength, use_ids)
+
+## Atributos por vecindad
+func get_neighbor_attribute_map(key, field: String, default_value: Variant = null) -> Dictionary:
+	return social_graph.get_neighbor_attribute_map(key, field, default_value)
+
+func get_neighbor_attribute_map_ids(key, field: String, default_value: Variant = null) -> Dictionary:
+	return social_graph.get_neighbor_attribute_map_ids(key, field, default_value)
 
 ## Depuración rápida (imprime estado del grafo).
 func debug_dump() -> void:
