@@ -73,7 +73,6 @@ func remove_node(key) -> void:
 	var v = vertices.get(key)
 	if v == null:
 		return
-
 	v.dispose()
 	vertices.erase(key)
 	emit_signal("node_removed", key)

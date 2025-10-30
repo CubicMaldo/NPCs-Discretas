@@ -16,8 +16,12 @@ func _ready() -> void:
 	social_graph.interaction_registered_ids.connect(_on_interaction_registered_ids)
 
 ## Asegura que un NPC (objeto o id) exista en el grafo.
-func ensure_npc(npc_or_id) -> void:
-	social_graph.ensure_npc(npc_or_id)
+## [br]
+## Argumentos:
+## - npc_or_id: NPC object o id numérico.
+## - meta: Diccionario opcional con metadatos del nodo.
+func ensure_npc(npc_or_id, meta: Dictionary = {}) -> void:
+	social_graph.ensure_npc(npc_or_id, meta)
 
 ## Registra una interacción delegando en el grafo social (objeto-first, ids opcionales).
 func register_interaction(a, b, base_delta := 0.0, options: Dictionary = {}) -> void:
