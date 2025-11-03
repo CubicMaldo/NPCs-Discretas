@@ -10,8 +10,8 @@ var edges: Dictionary[Variant, Edge] = {}
 
 ## Identificador entero opcional (útil para indexación rápida).
 var id: int = -1
-## Metadata arbitraria asociada al vértice.
-var meta: Dictionary = {}
+## Metadata arbitraria asociada al vértice (puede ser cualquier Resource o null).
+var meta: Resource = null
 
 
 ## Inicializa el vértice.
@@ -19,13 +19,13 @@ var meta: Dictionary = {}
 ## Argumentos:
 ## - `_key`: Clave del vértice (no puede ser null).
 ## - `_id`: Identificador entero (opcional).
-## - `_meta`: Diccionario de metadata (copiado por valor).
-func _init(_key: Variant = null, _id: int = -1, _meta: Dictionary = {}):
+## - `_meta`: Resource opcional con metadata (ej: VertexMeta, NPCVertexMeta, o cualquier Resource personalizado).
+func _init(_key: Variant = null, _id: int = -1, _meta: Resource = null):
 	assert(_key != null, "Vertex key cannot be null")
 	key = _key
 	id = _id
-	meta = _meta.duplicate(true) if _meta else {}
 	edges = {}
+	meta = _meta
 
 
 ## Devuelve las claves de los vecinos conectados a este vértice.

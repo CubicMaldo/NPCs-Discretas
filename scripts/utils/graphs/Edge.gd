@@ -8,7 +8,7 @@ var endpoint_a: Vertex = null
 var endpoint_b: Vertex = null
 ## Peso de la arista.
 var weight: float = 0.0
-## Metadata arbitraria asociada a la arista (puede ser Resource o null).
+## Metadata asociada a la arista (puede ser Resource o null).
 var metadata: Resource = null
 
 
@@ -16,7 +16,7 @@ var metadata: Resource = null
 ##
 ## Argumentos:
 ## - `_a`: Vértice extremo A.
-## - `_b`: Vértice extremo B.
+## - `_b`: Vértice extremo B. 
 ## - `_weight`: Peso inicial (float).
 func _init(_a: Vertex = null, _b: Vertex = null, _weight: float = 0.0, _metadata: Resource = null):
 	endpoint_a = _a

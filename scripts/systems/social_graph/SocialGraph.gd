@@ -37,7 +37,8 @@ var _adjacency_by_id: Dictionary = {}
 
 
 ## Garantiza que un NPC quede registrado y monitorizado.
-func ensure_npc(npc_or_id, meta: Dictionary = {}) -> Vertex:
+## Acepta cualquier Resource como metadata, pero por defecto usa NPCVertexMeta.
+func ensure_npc(npc_or_id, meta: Resource = null) -> Vertex:
 	if npc_or_id == null:
 		return null
 	if npc_or_id is NPC:
@@ -48,30 +49,45 @@ func ensure_npc(npc_or_id, meta: Dictionary = {}) -> Vertex:
 
 
 ## Registra un NPC por objeto, enlazando WeakRef y ganchos de limpieza.
-func _ensure_npc_object(npc: NPC, meta: Dictionary = {}) -> Vertex:
+## Acepta cualquier Resource como metadata, pero crea NPCVertexMeta por defecto si no se proporciona.
+func _ensure_npc_object(npc: NPC, meta: Resource = null) -> Vertex:
 	if npc == null:
 		return null
 	var npc_id := int(npc.npc_id)
 	var vertex: Vertex = get_vertex(npc)
+	
+	# Si el vértice ya existe y no se proporciona metadata, no crear metadata por defecto
+	# Solo crear metadata por defecto para vértices nuevos
+	var npc_meta := meta
+	if npc_meta == null and vertex == null:
+		var default_meta := NPCVertexMeta.new()
+		default_meta.id = npc_id
+		if npc.name and npc.name != "":
+			default_meta.display_name = npc.name
+		else:
+			default_meta.display_name = "NPC_%d" % npc_id
+		npc_meta = default_meta
+	
 	if vertex == null and npc_id != -1 and _pending_vertices.has(npc_id):
 		vertex = _pending_vertices[npc_id]
 		if super.rekey_vertex(npc_id, npc):
 			_rekey_cache_entry(npc_id, npc)
 			_pending_vertices.erase(npc_id)
+			if npc_meta != null:
+				vertex.meta = npc_meta
 		else:
 			vertex = null
+	
 	if vertex == null:
-		vertex = super.ensure_node(npc, meta)
-	elif meta:
-		for mkey in meta:
-			vertex.meta[mkey] = meta[mkey]
+		vertex = super.ensure_node(npc, npc_meta)
+	elif npc_meta != null:
+		# Solo actualizar metadata si se proporcionó explícitamente
+		vertex.meta = npc_meta
+	
 	if vertex:
 		if npc_id != -1:
 			vertex.id = npc_id
 			_npc_registry[npc_id] = weakref(npc)
-		if meta:
-			for mkey in meta:
-				vertex.meta[mkey] = meta[mkey]
 		_npc_to_vertex[npc] = vertex
 		_connect_lifecycle_hooks(npc)
 		_enforce_dunbar_limit(vertex.key)
@@ -79,8 +95,21 @@ func _ensure_npc_object(npc: NPC, meta: Dictionary = {}) -> Vertex:
 
 
 ## Registra un NPC por id entero (modo persistencia/pending).
-func _ensure_npc_id(npc_id: int, meta: Dictionary = {}) -> Vertex:
-	var vertex: Vertex = super.ensure_node(npc_id, meta)
+## Acepta cualquier Resource como metadata, pero crea NPCVertexMeta por defecto si no se proporciona.
+func _ensure_npc_id(npc_id: int, meta: Resource = null) -> Vertex:
+	# Si el vértice ya existe y no se proporciona metadata, no sobrescribir
+	var existing_vertex = get_vertex(npc_id)
+	if existing_vertex != null and meta == null:
+		return existing_vertex
+	
+	var npc_meta := meta
+	if npc_meta == null:
+		var default_meta := NPCVertexMeta.new()
+		default_meta.id = npc_id
+		default_meta.display_name = "NPC_%d" % npc_id
+		npc_meta = default_meta
+	
+	var vertex: Vertex = super.ensure_node(npc_id, npc_meta)
 	if vertex:
 		vertex.id = npc_id
 		_pending_vertices[npc_id] = vertex
@@ -172,12 +201,10 @@ func _to_id(entity_or_key):
 func add_connection(a, b, familiarity: float, edge_metadata: Resource = null) -> void:
 	var existed := has_edge(a, b)
 	
-	# Crear EdgeMetadata por defecto si no se proporciona o no es EdgeMetadata
-	var meta: EdgeMetadata = null
-	if edge_metadata != null and edge_metadata is EdgeMetadata:
-		meta = edge_metadata as EdgeMetadata
-	else:
-		meta = EdgeMetadata.new()
+	# Crear SocialEdgeMeta por defecto si no se proporciona metadata
+	var meta: Resource = edge_metadata
+	if meta == null:
+		meta = SocialEdgeMeta.new(familiarity)
 	
 	super.add_connection(a, b, familiarity, meta)  # familiarity se usa como weight en Graph
 	if has_edge(a, b):
@@ -364,8 +391,8 @@ func _rekey_cache_entry(old_key, new_key) -> void:
 ## Argumentos:
 ## - `a`, `b`: Objetos NPC o ids enteros.
 ## - `familiarity`: Nivel de familiaridad a asignar (qué tan bien se conocen).
-## - `edge_metadata`: EdgeMetadata opcional para la arista.
-func connect_npcs(a, b, familiarity: float, edge_metadata: EdgeMetadata = null) -> void:
+## - `edge_metadata`: SocialEdgeMeta opcional para la arista (o cualquier Resource compatible).
+func connect_npcs(a, b, familiarity: float, edge_metadata: Resource = null) -> void:
 	if a == b:
 		return
 	var vertex_a: Vertex = ensure_npc(a)
@@ -383,9 +410,9 @@ func connect_npcs(a, b, familiarity: float, edge_metadata: EdgeMetadata = null) 
 ## - `a`, `b`: Objetos NPC o ids enteros.
 ## - `familiarity_a_to_b`: Familiaridad de A hacia B (qué tan bien A conoce a B).
 ## - `familiarity_b_to_a`: Familiaridad de B hacia A. Si es null, usa el mismo valor que A→B.
-## - `edge_metadata_a_to_b`: EdgeMetadata opcional para la arista A→B.
-## - `edge_metadata_b_to_a`: EdgeMetadata opcional para la arista B→A.
-func connect_npcs_mutual(a, b, familiarity_a_to_b: float, familiarity_b_to_a: Variant = null, edge_metadata_a_to_b: EdgeMetadata = null, edge_metadata_b_to_a: EdgeMetadata = null) -> void:
+## - `edge_metadata_a_to_b`: SocialEdgeMeta opcional para la arista A→B (o cualquier Resource).
+## - `edge_metadata_b_to_a`: SocialEdgeMeta opcional para la arista B→A (o cualquier Resource).
+func connect_npcs_mutual(a, b, familiarity_a_to_b: float, familiarity_b_to_a: Variant = null, edge_metadata_a_to_b: Resource = null, edge_metadata_b_to_a: Resource = null) -> void:
 	if a == b:
 		return
 	var fam_ba: float = familiarity_b_to_a if familiarity_b_to_a != null else familiarity_a_to_b
@@ -595,14 +622,14 @@ func get_friends_above(npc_or_id, threshold: float) -> Array:
 ## Argumentos:
 ## - `a`, `b`: NPCs o ids.
 ## - `base_delta`: Delta base a sumar.
-## - `options`: { min_weight:=0.0, max_weight:=100.0, smoothing:=0.0 }
+## - `options`: { min_weight:=0.0, max_weight:=100.0, smoothing:=0.0, meta_a:=Resource, meta_b:=Resource }
 ## Notas:
 ## - Si los NPCs implementan `_evaluate_interaction_delta(other)` se promedia su contribución.
 func register_interaction(a, b, base_delta := 0.0, options: Dictionary = {}) -> void:
 	if a == null or b == null:
 		return
-	var meta_a: Dictionary = options.get("meta_a", {})
-	var meta_b: Dictionary = options.get("meta_b", {})
+	var meta_a: Resource = options.get("meta_a", null)
+	var meta_b: Resource = options.get("meta_b", null)
 	var vertex_a: Vertex = ensure_npc(a, meta_a)
 	var vertex_b: Vertex = ensure_npc(b, meta_b)
 	var ka = vertex_a.key if vertex_a else _normalize_key(a)
@@ -739,7 +766,8 @@ func get_vertex_by_npc(npc: NPC) -> Vertex:
 
 
 ## Registra un NPC instanciado tras la carga de datos.
-func register_loaded_npc(npc: NPC, meta: Dictionary = {}) -> void:
+## Acepta cualquier Resource como metadata.
+func register_loaded_npc(npc: NPC, meta: Resource = null) -> void:
 	_ensure_npc_object(npc, meta)
 
 
@@ -791,9 +819,19 @@ func _serialize_nodes() -> Array[Dictionary]:
 			var inferred = _to_id(key)
 			if inferred != null:
 				v_id = int(inferred)
+		
+		# Serializar metadata usando to_dict() si es VertexMeta o subclase
+		var meta_dict: Dictionary = {}
+		if vertex.meta != null:
+			if vertex.meta.has_method("to_dict"):
+				meta_dict = vertex.meta.to_dict()
+			else:
+				# Si es otro tipo de Resource, intentar var2str o advertir
+				push_warning("Vertex metadata no tiene método to_dict(), no se serializará completamente")
+		
 		var entry: Dictionary = {
 			"id": v_id,
-			"meta": vertex.meta.duplicate(true)
+			"meta": meta_dict
 		}
 		entry["has_object"] = typeof(key) == TYPE_OBJECT
 		out.append(entry)
@@ -841,11 +879,13 @@ func deserialize(data: Dictionary) -> bool:
 		var npc_id := int(node_dict.get("id", -1))
 		if npc_id == -1:
 			continue
-		var meta: Dictionary = node_dict.get("meta", {})
-		var vertex := super.ensure_node(npc_id, meta)
+		var meta_dict: Dictionary = node_dict.get("meta", {})
+		# Crear NPCVertexMeta desde el diccionario guardado
+		var npc_meta: NPCVertexMeta = NPCVertexMeta.from_dict(meta_dict)
+		npc_meta.loaded_from_save = true
+		var vertex := super.ensure_node(npc_id, npc_meta)
 		if vertex:
 			vertex.id = npc_id
-			vertex.meta["loaded_from_save"] = true
 			_pending_vertices[npc_id] = vertex
 	var edges: Array = payload.get("edges", [])
 	for edge_dict in edges:

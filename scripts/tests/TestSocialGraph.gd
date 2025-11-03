@@ -1,9 +1,6 @@
 @tool
 extends TestSuiteBase
 
-const SocialGraphClass = preload("res://scripts/systems/SocialGraph.gd")
-const SocialGraphManagerClass = preload("res://scripts/systems/SocialGraphManager.gd")
-const NPCClass = preload("res://scripts/entities/NPC.gd")
 ## Ejecuta el conjunto de pruebas básicas al entrar en escena.
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -27,18 +24,21 @@ func _register_tests() -> void:
 
 
 func _test_npc_registration() -> Dictionary:
-	var graph := SocialGraphClass.new()
-	var npc := NPCClass.new()
+	var graph := SocialGraph.new()
+	var npc := NPC.new()
 	npc.npc_id = 42
-	graph.ensure_npc(npc, {"role": "test"})
+	var meta := NPCVertexMeta.new()
+	meta.role = "test"
+	graph.ensure_npc(npc, meta)
 	var vertex := graph.get_vertex_by_npc(npc)
 	var passed := vertex != null and vertex.id == 42
 	npc.free()
+	graph.clear()
 	return assert_true(passed, "NPC registration stores weak refs", "Vertex not created")
 
 
 func _test_serialization_roundtrip() -> Dictionary:
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	graph.connect_npcs(1, 2, 75.0)
 	graph.connect_npcs(2, 3, 25.0)
 	var data := graph.serialize()
@@ -49,42 +49,46 @@ func _test_serialization_roundtrip() -> Dictionary:
 	var details := ""
 	if not passed:
 		details = "Deserialize failed" if not ok else "Edges missing after reload"
+	graph.clear()
 	return make_result("Serialize/Deserialize preserves edges", passed, details)
 
 
 func _test_decay_behavior() -> Dictionary:
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	graph.connect_npcs(10, 11, 5.0)
 	graph.decay_rate_per_second = 10.0
 	var stats := graph.apply_decay(1.0)
 	var removed: bool = stats.get("removed", 0) >= 1
 	var passed := removed and not graph.has_edge(10, 11)
+	graph.clear()
 	return assert_true(passed, "Decay removes edges when weight reaches zero", "Edge still present after decay")
 
 
 func _test_cleanup_invalid_nodes() -> Dictionary:
-	var graph := SocialGraphClass.new()
-	var npc := NPCClass.new()
+	var graph := SocialGraph.new()
+	var npc := NPC.new()
 	npc.npc_id = 99
 	graph.ensure_npc(npc)
 	npc.free()
 	var removed := graph.cleanup_invalid_nodes()
+	graph.clear()
 	return assert_true(removed >= 1, "Cleanup removes freed NPCs", "No nodes removed")
 
 
 func _test_manager_wrappers() -> Dictionary:
-	var manager := SocialGraphManagerClass.new()
+	var manager := SocialGraphManager.new()
 	manager._ready()
 	manager.ensure_npc(5)
 	manager.ensure_npc(6)
 	manager.add_connection(5, 6, 10.0)
 	var serialized := manager.serialize_graph()
 	var valid: bool = serialized.get("metadata", {}).get("edge_count", 0) == 1
+	manager.social_graph.clear()
 	return assert_true(valid, "Manager delegates serialization", "Edge count mismatch")
 
 
 func _test_caching_layer() -> Dictionary:
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	graph.connect_npcs(1, 2, 10.0)
 	graph.connect_npcs(2, 3, 5.0)
 	var cache := graph.get_cached_neighbors(2)
@@ -98,15 +102,17 @@ func _test_caching_layer() -> Dictionary:
 	var cache_after := graph.get_cached_neighbors(2)
 	var removal_ok: bool = not cache_after.has(3)
 	var passed: bool = baseline_ok and removal_ok
+	graph.clear()
 	return assert_true(passed, "Caching layer mirrors edges", "Cache desync detected")
 
 
 func _test_shortest_path() -> Dictionary:
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	graph.connect_npcs(1, 2, 1.0)
 	graph.connect_npcs(2, 3, 1.0)
 	graph.connect_npcs(1, 3, 5.0)
 	var result := graph.get_shortest_path(1, 3)
+	graph.clear()
 	if not result.get("reachable", false):
 		return make_result("Shortest path uses Dijkstra", false, "Nodes reported unreachable")
 	var path_ids: Array = result.get("path_ids", result.get("path", []))
@@ -116,7 +122,7 @@ func _test_shortest_path() -> Dictionary:
 
 
 func _test_mutual_connections() -> Dictionary:
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	graph.connect_npcs(1, 2, 80.0)
 	graph.connect_npcs(1, 3, 60.0)
 	graph.connect_npcs(2, 3, 70.0)
@@ -124,6 +130,7 @@ func _test_mutual_connections() -> Dictionary:
 	var result := graph.get_mutual_connections(1, 2, 50.0)
 	var count_ok: bool = result.get("count", 0) == 1
 	var entries: Array = result.get("entries_ids", [])
+	graph.clear()
 	if not count_ok or entries.size() == 0:
 		return make_result("Mutual friend analytics", false, "Expected single mutual friend")
 	var entry: Dictionary = entries[0]
@@ -133,11 +140,12 @@ func _test_mutual_connections() -> Dictionary:
 
 
 func _test_rumor_propagation() -> Dictionary:
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	graph.connect_npcs(1, 2, 100.0)
 	graph.connect_npcs(2, 3, 50.0)
 	var result: Dictionary = graph.simulate_rumor(1, 3, 0.5, 0.1)
 	var influence: Dictionary = result.get("influence_ids", {})
+	graph.clear()
 	if not influence.has(2) or not influence.has(3):
 		return make_result("Rumor propagation reaches neighbors", false, "Influence map missing ids -> %s" % [str(influence)])
 	var check_mid: Dictionary = assert_float_approx(0.5, float(influence.get(2, 0.0)), 0.05, "Rumor propagation reaches neighbors")

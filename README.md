@@ -26,7 +26,8 @@
   - `systems/` – Simulation subsystems (`SocialGraphManager.gd`, `BehaviorSystem.gd`).
   - `states/` – Resource-based NPC states (`IdleState.gd`, `WalkState.gd`, `InteractState.gd`).
   - `ui/` – Future HUD/graph/log controllers.
-  - `utils/` – Generic helpers (`Graph.gd`, `GraphAlgorithms.gd`, `Logger.gd`, `MathUtils.gd`, `Vertex.gd`, `Edge.gd`).
+  - `utils/` – Generic helpers (`Graph.gd`, `GraphAlgorithms.gd`, `Logger.gd`, `MathUtils.gd`, `Vertex.gd`, `Edge.gd`, `VertexMeta.gd`, `NPCVertexMeta.gd`).
+  - `tests/` – Test suites (`TestSuiteBase.gd`, `TestSocialGraph.gd`, `TestResourceMetadata.gd`).
 
 ## Core Systems (current state)
 
@@ -36,10 +37,11 @@
   - Maintains WeakRef registry for active NPCs, automatically cleaning up freed nodes via lifecycle hooks.
   - Bidirectional adjacency cache layers (`_adjacency_by_key`, `_adjacency_by_id`) enable O(1) neighbor queries.
   - **Directed API**: `connect_npcs(a, b, familiarity)` creates A→B edge only; `connect_npcs_mutual(a, b, fam_ab, fam_ba)` creates bidirectional A↔B with independent weights.
+  - **Resource-based metadata**: Vertices support flexible `Resource` metadata (e.g., `NPCVertexMeta`) for type-safe node attributes. Metadata is serialized via `to_dict()`/`from_dict()` methods.
   - Core methods: `ensure_npc`, `connect_npcs`, `connect_npcs_mutual`, `break_relationship`, `get_relationships_for`, `get_cached_neighbors`, `register_interaction`.
   - Advanced queries: `get_shortest_path`, `get_strongest_path`, `get_mutual_connections`, `simulate_rumor` (all respect edge directionality).
   - Lifecycle: `apply_decay`, `cleanup_invalid_nodes`, `validate_graph`, `repair_graph`.
-  - Persistence: `serialize`, `deserialize`, `save_to_file`, `load_from_file` with optional compression.
+  - Persistence: `serialize`, `deserialize`, `save_to_file`, `load_from_file` with optional compression. Metadata is automatically serialized if it implements `to_dict()`.
 
 - **SocialGraphManager** (`scripts/systems/SocialGraphManager.gd`)
   - Runtime façade that instantiates and manages a `SocialGraph` singleton.
@@ -51,9 +53,12 @@
 - **Graph** (`scripts/utils/Graph.gd`)
   - Lightweight, domain-agnostic **undirected graph** base class (RefCounted).
   - Uses explicit `Vertex` and `Edge` objects (see `scripts/utils/Vertex.gd` and `scripts/utils/Edge.gd`).
-  - Core API: `add_node`, `ensure_node`, `remove_node`, `add_connection`, `remove_connection`, `get_edge`, `get_edges`, `get_neighbor_weights`, `get_neighbors`, `get_degree`.
+  - **Vertex metadata**: Each `Vertex` has a flexible `meta: Resource` field that accepts any Resource subclass for custom node data.
+  - **Edge metadata**: Each `Edge` has a `metadata: Resource` field for custom edge attributes.
+  - Core API: `add_node(key, meta: Resource)`, `ensure_node(key, meta: Resource)`, `remove_node`, `add_connection`, `remove_connection`, `get_edge`, `get_edges`, `get_neighbor_weights`, `get_neighbors`, `get_degree`.
   - `clear()` and `remove_node()` call `Vertex.dispose()` to break cyclic references and allow proper garbage collection.
   - `rekey_vertex()` supports dynamic key changes (used when pending NPCs are instantiated from saved data).
+  - Metadata preservation: `ensure_node()` only updates metadata if explicitly provided; existing metadata is preserved when calling without meta argument.
 
 - **RelationshipComponent** (`scripts/entities/RelationshipComponent.gd`)
   - Per-NPC component that manages local relationship state and synchronizes with the `SocialGraphManager`.
@@ -82,6 +87,30 @@
 
 ## Usage Examples
 
+### Creating NPCs with Metadata
+```gdscript
+# Create typed metadata for an NPC
+var meta := NPCVertexMeta.new()
+meta.id = 42
+meta.display_name = "Alice"
+meta.role = "warrior"
+meta.faction = "knights"
+meta.level = 15
+
+# Register NPC with metadata
+social_graph.ensure_npc(npc_alice, meta)
+
+# Metadata is preserved across operations
+social_graph.connect_npcs(npc_alice, npc_bob, 75.0)  # Alice's metadata unchanged
+
+# Custom metadata for different vertex types
+var location_meta := LocationMeta.new()
+location_meta.name = "Tavern"
+location_meta.location_type = "social"
+location_meta.population = 20
+graph.add_node("tavern_square", location_meta)
+```
+
 ### Creating Directed Relationships
 ```gdscript
 # Unidirectional: Alice knows Bob (Bob doesn't know Alice)
@@ -94,7 +123,10 @@ social_graph.connect_npcs_mutual("Carol", "Dave", 80.0)
 social_graph.connect_npcs_mutual("Eve", "Frank", 90.0, 50.0)
 # Eve trusts Frank (90), but Frank trusts Eve less (50)
 
-# Via SocialGraphManager
+# Via SocialGraphManager with metadata
+var meta := NPCVertexMeta.new()
+meta.role = "merchant"
+manager.ensure_npc(npc_id, meta)
 manager.add_connection_mutual(npc_a, npc_b, 75.0, 60.0)
 ```
 
@@ -170,7 +202,14 @@ manager.register_interaction(npc_a, npc_b, 5.0, {
   - Mutual connection metrics (common out-neighbors)
   - Rumor propagation respecting edge directionality
   - Run tests via the scene `scenes/tests/test_social_graph.tscn` or call `run_all_tests()` programmatically.
+- **TestResourceMetadata** (`scripts/tests/TestResourceMetadata.gd`) validates:
+  - Resource-based vertex metadata (NPCVertexMeta)
+  - Custom data fields in metadata
+  - Serialization/deserialization of metadata
+  - Metadata persistence across graph operations
+  - Type-safe metadata access
 - Built-in stress tests and edge case validation: `SocialGraph.stress_test(num_nodes, num_edges)`, `SocialGraph.test_edge_cases()`.
+- All tests include cleanup (`clear()`) to prevent memory leaks and verify proper resource management.
 - Benchmark results documented in `docs/benchmark_results.md`.
 
 ## Coding Guidelines
@@ -199,9 +238,13 @@ manager.register_interaction(npc_a, npc_b, 5.0, {
 ### Directed Graph System
 - **Asymmetric relationships**: A can know B without B knowing A.
 - **Independent edge weights**: Bidirectional relationships can have different familiarity levels in each direction.
+- **Resource-based metadata**: Type-safe vertex and edge metadata using Godot's Resource system.
+  - **Flexible**: Accept any Resource subclass (NPCVertexMeta, LocationMeta, ItemMeta, custom types).
+  - **Serializable**: Automatic serialization via `to_dict()`/`from_dict()` methods.
+  - **Preserved**: Metadata is only updated when explicitly provided, preventing accidental overwrites.
 - **Efficient queries**: O(1) neighbor lookups via adjacency cache for out-neighbors.
 - **Automatic cleanup**: WeakRef-based registry with lifecycle hooks (`tree_exiting`) prevents memory leaks.
-- **Persistence**: Full serialization/deserialization with pending vertex support for loading NPCs asynchronously.
+- **Persistence**: Full serialization/deserialization with pending vertex support for loading NPCs asynchronously, including metadata.
 
 ### Graph Algorithms
 All algorithms respect edge directionality:
@@ -240,10 +283,13 @@ All algorithms respect edge directionality:
 
 ### Testing Checklist
 - [ ] Run `TestSocialGraph.run_all_tests()` - all tests pass
+- [ ] Run `TestResourceMetadata` - metadata serialization/deserialization works
 - [ ] Execute `SocialGraph.validate_graph()` - no errors reported
 - [ ] Check `SocialGraph.test_edge_cases()` - all edge cases handled
 - [ ] Verify directed graph behavior with asymmetric relationships
+- [ ] Test metadata preservation across graph operations
 - [ ] Test serialization/deserialization if persistence code changed
 - [ ] Validate WeakRef cleanup with `cleanup_invalid_nodes()`
+- [ ] Verify no memory leaks (object count should stabilize after tests)
 
 Happy simulating!

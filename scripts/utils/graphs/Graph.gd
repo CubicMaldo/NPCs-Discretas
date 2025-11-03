@@ -30,8 +30,8 @@ var vertices: Dictionary[Variant, Vertex] = {}
 ## [br]
 ## Argumentos:
 ## - `key`: Clave del nodo (no puede ser `null`).
-## - `meta`: Diccionario opcional con metadatos.
-func add_node(key, meta: Dictionary = {}) -> Vertex:
+## - `meta`: Resource opcional con metadata (ej: VertexMeta, NPCVertexMeta, o cualquier Resource personalizado).
+func add_node(key, meta: Resource = null) -> Vertex:
 	if key == null:
 		push_error("Graph.add_node: key cannot be null")
 		return null
@@ -39,8 +39,7 @@ func add_node(key, meta: Dictionary = {}) -> Vertex:
 	var vertex = vertices.get(key)
 	if vertex:
 		if meta:
-			for mk in meta:
-				vertex.meta[mk] = meta[mk]
+			vertex.meta = meta
 		return vertex
 	
 	vertex = Vertex.new(key, _id_as_int(key), meta)
@@ -53,14 +52,13 @@ func add_node(key, meta: Dictionary = {}) -> Vertex:
 ## [br]
 ## Argumentos:
 ## - `key`: Identificador del nodo.
-## - `meta`: Diccionario opcional con metadatos.
-func ensure_node(key, meta: Dictionary = {}) -> Vertex:
+## - `meta`: Resource opcional con metadata (ej: VertexMeta, NPCVertexMeta, o cualquier Resource personalizado).
+func ensure_node(key, meta: Resource = null) -> Vertex:
 	if not vertices.has(key):
 		return add_node(key, meta)
 	elif meta:
 		var v = vertices[key]
-		for mk in meta:
-			v.meta[mk] = meta[mk]
+		v.meta = meta
 		return v
 	return vertices.get(key)
 
@@ -164,7 +162,9 @@ func add_connection(a, b, weight: float, edge_metadata: Resource = null) -> void
 	var vb: Vertex = vertices[b]
 	var edge: Edge = va.edges.get(b)
 	if edge == null:
-		edge = Edge.new(va, vb, weight, edge_metadata)
+		edge = Edge.new(va, vb, weight)
+		if edge_metadata != null:
+			edge.metadata = edge_metadata
 		va.edges[b] = edge
 		vb.edges[a] = edge
 		emit_signal("edge_added", a, b)
@@ -180,10 +180,10 @@ func add_connection(a, b, weight: float, edge_metadata: Resource = null) -> void
 ## - `a`: Nodo origen.
 ## - `b`: Nodo destino.
 ## - `weight`: Peso de la conexión (por defecto 1.0).
-## - `meta_a`: Metadata opcional para el nodo A.
-## - `meta_b`: Metadata opcional para el nodo B.
+## - `meta_a`: Resource opcional para metadata del nodo A.
+## - `meta_b`: Resource opcional para metadata del nodo B.
 ## - `edge_metadata`: Resource opcional con metadata de la arista.
-func connect_vertices(a, b, weight := 1.0, meta_a := {}, meta_b := {}, edge_metadata: Resource = null) -> void:
+func connect_vertices(a, b, weight := 1.0, meta_a: Resource = null, meta_b: Resource = null, edge_metadata: Resource = null) -> void:
 	ensure_node(a, meta_a)
 	ensure_node(b, meta_b)
 	add_connection(a, b, weight, edge_metadata)

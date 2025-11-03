@@ -32,7 +32,7 @@ func run_all_examples() -> void:
 func example_1_basic_directed_edge() -> void:
 	print("\n--- EJEMPLO 1: Arista Dirigida Básica ---")
 	
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	
 	# Alice conoce a Bob, pero Bob NO conoce a Alice
 	graph.connect_npcs("Alice", "Bob", 75.0)
@@ -60,7 +60,7 @@ func example_1_basic_directed_edge() -> void:
 func example_2_bidirectional_relationship() -> void:
 	print("\n--- EJEMPLO 2: Relación Bidireccional ---")
 	
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	
 	# Método 1: Crear ambas direcciones manualmente
 	graph.connect_npcs("Alice", "Bob", 80.0)
@@ -83,7 +83,7 @@ func example_2_bidirectional_relationship() -> void:
 func example_3_asymmetric_trust() -> void:
 	print("\n--- EJEMPLO 3: Confianza Asimétrica ---")
 	
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	
 	# Alice confía mucho en Bob (80), pero Bob confía poco en Alice (40)
 	graph.connect_npcs_mutual("Alice", "Bob", 80.0, 40.0)
@@ -108,7 +108,7 @@ func example_3_asymmetric_trust() -> void:
 func example_4_espionage_network() -> void:
 	print("\n--- EJEMPLO 4: Red de Espionaje ---")
 	
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	
 	# Agentes espías
 	var agents = ["Agent007", "AgentX", "AgentY"]
@@ -136,7 +136,7 @@ func example_4_espionage_network() -> void:
 func example_5_organizational_hierarchy() -> void:
 	print("\n--- EJEMPLO 5: Jerarquía Organizacional ---")
 	
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	
 	# Estructura: Líder → Capitanes → Soldados
 	graph.connect_npcs("Leader", "Captain1", 100.0)
@@ -166,7 +166,7 @@ func example_5_organizational_hierarchy() -> void:
 func example_6_information_flow() -> void:
 	print("\n--- EJEMPLO 6: Flujo de Información ---")
 	
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	
 	# Fuente de información → Intermediarios → Consumidores
 	graph.connect_npcs("NewsSource", "Reporter1", 100.0)
@@ -194,7 +194,7 @@ func example_6_information_flow() -> void:
 func example_7_rumor_propagation() -> void:
 	print("\n--- EJEMPLO 7: Propagación de Rumor ---")
 	
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	
 	# Crear red social dirigida
 	graph.connect_npcs("Alice", "Bob", 100.0)
@@ -224,7 +224,7 @@ func example_7_rumor_propagation() -> void:
 func example_8_shortest_path() -> void:
 	print("\n--- EJEMPLO 8: Camino Más Corto Dirigido ---")
 	
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	
 	# Crear red con múltiples caminos
 	graph.connect_npcs("A", "B", 1.0)
@@ -251,7 +251,7 @@ func example_8_shortest_path() -> void:
 func example_9_strongest_path() -> void:
 	print("\n--- EJEMPLO 9: Camino Más Fuerte ---")
 	
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	
 	# Crear red con diferentes niveles de confianza
 	# Camino directo: A→D (50% confianza)
@@ -277,7 +277,7 @@ func example_9_strongest_path() -> void:
 func example_10_mutual_friends() -> void:
 	print("\n--- EJEMPLO 10: Amigos Mutuos ---")
 	
-	var graph := SocialGraphClass.new()
+	var graph := SocialGraph.new()
 	
 	# Crear red social con relaciones bidireccionales y dirigidas
 	graph.connect_npcs_mutual("Alice", "Bob", 80.0, 80.0)

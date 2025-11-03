@@ -1,17 +1,11 @@
-## Metadata estructurada para aristas del grafo social entre NPCs.
-##
-## Esta clase extiende Resource para proporcionar type safety y validación automática
-## de los atributos de las relaciones sociales. Cada arista dirigida A→B tiene su propia
-## instancia de EdgeMetadata que describe la naturaleza y estado de esa relación.
-class_name EdgeMetadata extends Resource
+## Metadata tipada específica para aristas de relaciones sociales entre NPCs.
+## Extiende EdgeMeta con campos relevantes para simulación social.
+class_name SocialEdgeMeta
+extends EdgeMeta
 
 ## Nivel de confianza normalizado [0..1].
 ## Representa qué tanto confía A en B. Valores más altos = mayor confianza.
 @export_range(0.0, 1.0, 0.01) var trust: float = 0.5
-
-## Timestamp de última interacción (Unix time).
-## Se actualiza automáticamente cada vez que los NPCs interactúan.
-@export var last_interaction: int = 0
 
 ## Tipo de relación entre los NPCs.
 ## Define la naturaleza social de la conexión.
@@ -34,41 +28,52 @@ var relationship_type: String = "Neutral"
 ## Constructor con valores por defecto configurables.
 ## [br]
 ## Argumentos:
+## - `p_weight`: Peso inicial de la relación (familiaridad). Default: 50.0
 ## - `p_trust`: Nivel inicial de confianza [0..1]. Default: 0.5
 ## - `p_type`: Tipo inicial de relación. Default: "Neutral"
-func _init(p_trust: float = 0.5, p_type: String = "Neutral") -> void:
+func _init(p_weight: float = 50.0, p_trust: float = 0.5, p_type: String = "Neutral") -> void:
+	super._init(p_weight, "social")
 	trust = clamp(p_trust, 0.0, 1.0)
 	relationship_type = p_type
-	last_interaction = int(Time.get_unix_time_from_system())
 
 
-## Serializa la metadata a Dictionary para guardar en JSON.
-## [br]
-## Retorna un Dictionary con todos los campos serializables.
+## Crea una copia profunda de la metadata de relación social.
+func duplicate_meta() -> SocialEdgeMeta:
+	var copy := SocialEdgeMeta.new(weight, trust, relationship_type)
+	copy.id = id
+	copy.created_at = created_at
+	copy.updated_at = updated_at
+	copy.interaction_count = interaction_count
+	copy.tags = tags.duplicate()
+	copy.hostility = hostility
+	copy.custom_data = custom_data.duplicate(true)
+	return copy
+
+
+## Serializa la metadata de relación social a un diccionario.
 func to_dict() -> Dictionary:
-	return {
-		"trust": trust,
-		"last_interaction": last_interaction,
-		"relationship_type": relationship_type,
-		"interaction_count": interaction_count,
-		"tags": tags.duplicate(),
-		"hostility": hostility
-	}
+	var base := super.to_dict()
+	base["trust"] = trust
+	base["relationship_type"] = relationship_type
+	base["interaction_count"] = interaction_count
+	base["tags"] = tags.duplicate()
+	base["hostility"] = hostility
+	return base
 
 
-## Reconstruye EdgeMetadata desde un Dictionary cargado de JSON.
-## [br]
-## Argumentos:
-## - `data`: Dictionary con los datos serializados.
-## [br]
-## Retorna una nueva instancia de EdgeMetadata.
-static func from_dict(data: Dictionary) -> EdgeMetadata:
-	var meta = EdgeMetadata.new()
+## Reconstruye la metadata de relación social desde un diccionario.
+static func from_dict(data: Dictionary) -> SocialEdgeMeta:
+	var meta := SocialEdgeMeta.new()
+	meta.id = int(data.get("id", -1))
+	meta.edge_type = str(data.get("edge_type", "social"))
+	meta.weight = float(data.get("weight", 50.0))
+	meta.created_at = int(data.get("created_at", 0))
+	meta.updated_at = int(data.get("updated_at", 0))
 	meta.trust = clamp(float(data.get("trust", 0.5)), 0.0, 1.0)
-	meta.last_interaction = int(data.get("last_interaction", 0))
 	meta.relationship_type = str(data.get("relationship_type", "Neutral"))
 	meta.interaction_count = int(data.get("interaction_count", 0))
 	meta.hostility = clamp(float(data.get("hostility", 0.0)), 0.0, 100.0)
+	meta.custom_data = data.get("custom_data", {}).duplicate(true)
 	
 	# Restaurar tags
 	var tags_data = data.get("tags", [])
@@ -83,10 +88,13 @@ static func from_dict(data: Dictionary) -> EdgeMetadata:
 ## Argumentos:
 ## - `delta_familiarity`: Cambio en familiaridad [-100..100].
 ## [br]
-## Ajusta confianza y actualiza contadores.
+## Ajusta confianza, peso, y actualiza contadores.
 func update_from_interaction(delta_familiarity: float) -> void:
 	interaction_count += 1
-	last_interaction = int(Time.get_unix_time_from_system())
+	touch()
+	
+	# Actualizar peso (familiaridad)
+	weight = clamp(weight + delta_familiarity, 0.0, 100.0)
 	
 	# Ajustar confianza basándose en cambio de familiaridad
 	# Cambios positivos aumentan confianza, negativos la reducen
@@ -106,10 +114,9 @@ func update_from_interaction(delta_familiarity: float) -> void:
 ## - `days`: Número de días para considerar "reciente". Default: 7
 ## [br]
 ## Retorna `true` si la última interacción fue hace menos de `days` días.
-func is_recent(days: int = 7) -> bool:
-	var current_time = Time.get_unix_time_from_system()
+func is_interaction_recent(days: int = 7) -> bool:
 	var seconds_per_day = 86400
-	return (current_time - last_interaction) < (days * seconds_per_day)
+	return is_recent(days * seconds_per_day)
 
 
 ## Verifica si la relación es hostil (hostilidad > umbral).
@@ -164,6 +171,7 @@ func has_tag(tag: String) -> bool:
 ## Útil para debugging y UI.
 func get_description() -> String:
 	var desc = "Tipo: %s" % relationship_type
+	desc += " | Familiaridad: %.0f" % weight
 	desc += " | Confianza: %.0f%%" % (trust * 100.0)
 	desc += " | Hostilidad: %.0f" % hostility
 	desc += " | Interacciones: %d" % interaction_count

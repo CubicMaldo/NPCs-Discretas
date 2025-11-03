@@ -1,8 +1,6 @@
 class_name SocialGraphManager
 extends Node
 
-const SocialGraphClass = preload("res://scripts/systems/SocialGraph.gd")
-
 ## Grafo social interno que maneja todas las relaciones.
 var social_graph: SocialGraph
 
@@ -11,7 +9,7 @@ signal interaction_registered(a_key, b_key, new_familiarity)
 signal interaction_registered_ids(a_id, b_id, new_familiarity)
 
 func _ready() -> void:
-	social_graph = SocialGraphClass.new()
+	social_graph = SocialGraph.new()
 	social_graph.interaction_registered.connect(_on_interaction_registered)
 	social_graph.interaction_registered_ids.connect(_on_interaction_registered_ids)
 
@@ -19,8 +17,8 @@ func _ready() -> void:
 ## [br]
 ## Argumentos:
 ## - npc_or_id: NPC object o id numérico.
-## - meta: Diccionario opcional con metadatos del nodo.
-func ensure_npc(npc_or_id, meta: Dictionary = {}) -> void:
+## - meta: Resource opcional con metadatos del nodo (ej: NPCVertexMeta).
+func ensure_npc(npc_or_id, meta: Resource = null) -> void:
 	social_graph.ensure_npc(npc_or_id, meta)
 
 ## Registra una interacción delegando en el grafo social (objeto-first, ids opcionales).
@@ -36,8 +34,8 @@ func register_interaction(a, b, base_delta := 0.0, options: Dictionary = {}) -> 
 ## - a: NPC origen (objeto o id).
 ## - b: NPC destino (objeto o id).
 ## - affinity: Familiaridad/conocimiento que A tiene de B [0..100].
-## - edge_metadata: Metadata opcional de tipo EdgeMetadata para la arista.
-func add_connection(a, b, affinity: float, edge_metadata: EdgeMetadata = null) -> void:
+## - edge_metadata: Metadata opcional de tipo SocialEdgeMeta para la arista (o cualquier Resource).
+func add_connection(a, b, affinity: float, edge_metadata: Resource = null) -> void:
 	social_graph.connect_npcs(a, b, affinity, edge_metadata)
 
 
@@ -49,9 +47,9 @@ func add_connection(a, b, affinity: float, edge_metadata: EdgeMetadata = null) -
 ## - a, b: NPCs (objetos o ids) a conectar.
 ## - affinity_a_to_b: Familiaridad que A tiene de B [0..100].
 ## - affinity_b_to_a: Familiaridad que B tiene de A [0..100]. Si es `null`, usa el mismo valor que A→B.
-## - edge_metadata_a_to_b: Metadata opcional para la arista A→B.
-## - edge_metadata_b_to_a: Metadata opcional para la arista B→A.
-func add_connection_mutual(a, b, affinity_a_to_b: float, affinity_b_to_a: Variant = null, edge_metadata_a_to_b: EdgeMetadata = null, edge_metadata_b_to_a: EdgeMetadata = null) -> void:
+## - edge_metadata_a_to_b: Metadata opcional tipo SocialEdgeMeta para la arista A→B (o cualquier Resource).
+## - edge_metadata_b_to_a: Metadata opcional tipo SocialEdgeMeta para la arista B→A (o cualquier Resource).
+func add_connection_mutual(a, b, affinity_a_to_b: float, affinity_b_to_a: Variant = null, edge_metadata_a_to_b: Resource = null, edge_metadata_b_to_a: Resource = null) -> void:
 	social_graph.connect_npcs_mutual(a, b, affinity_a_to_b, affinity_b_to_a, edge_metadata_a_to_b, edge_metadata_b_to_a)
 
 ## Elimina la arista dirigida entre dos actores si existe.
@@ -176,7 +174,8 @@ func apply_decay(delta_seconds: float) -> Dictionary:
 	return social_graph.apply_decay(delta_seconds)
 
 ## Registra un NPC cargado desde disco para atar el vértice pendiente.
-func register_loaded_npc(npc: NPC, meta: Dictionary = {}) -> void:
+## Acepta cualquier Resource como metadata.
+func register_loaded_npc(npc: NPC, meta: Resource = null) -> void:
 	social_graph.register_loaded_npc(npc, meta)
 
 ## Recupera un NPC por su id si sigue activo.
