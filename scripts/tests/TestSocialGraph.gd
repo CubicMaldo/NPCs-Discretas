@@ -89,15 +89,18 @@ func _test_manager_wrappers() -> Dictionary:
 
 func _test_caching_layer() -> Dictionary:
 	var graph := SocialGraph.new()
+	# En grafo dirigido: 1→2, 2→3
 	graph.connect_npcs(1, 2, 10.0)
 	graph.connect_npcs(2, 3, 5.0)
+
 	var cache := graph.get_cached_neighbors(2)
 	var cache_ids := graph.get_cached_neighbors_ids(2)
 	var degree := graph.get_cached_degree(2)
 	var degree_ids := graph.get_cached_degree_ids(2)
-	var baseline_ok: bool = cache.get(1, null) == 10.0 and cache.get(3, null) == 5.0
-	baseline_ok = baseline_ok and cache_ids.get(1, null) == 10.0 and cache_ids.get(3, null) == 5.0
-	baseline_ok = baseline_ok and degree == 2 and degree_ids == 2
+	
+	var baseline_ok: bool = not cache.has(1) and cache.get(3, null) == 5.0
+	baseline_ok = baseline_ok and not cache_ids.has(1) and cache_ids.get(3, null) == 5.0
+	baseline_ok = baseline_ok and degree == 1 and degree_ids == 1
 	graph.break_relationship(2, 3)
 	var cache_after := graph.get_cached_neighbors(2)
 	var removal_ok: bool = not cache_after.has(3)

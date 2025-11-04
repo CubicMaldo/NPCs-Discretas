@@ -529,6 +529,15 @@ func get_cached_degree_ids(npc_or_id) -> int:
 	return get_cached_neighbors_ids(npc_or_id).size()
 
 
+## Devuelve el número total de aristas dirigidas en el grafo.
+## Sobrescribe el método de Graph que asume grafo no dirigido (divide por 2).
+func get_edge_count() -> int:
+	var count := 0
+	for k in vertices:
+		count += (vertices[k] as Vertex).edges.size()
+	return count
+
+
 func get_shortest_path(a, b) -> Dictionary:
 	var key_a = _graph_key_from_input(a)
 	var key_b = _graph_key_from_input(b)

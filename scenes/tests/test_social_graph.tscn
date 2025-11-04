@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://cadml0alggsio"]
 
-[ext_resource type="Script" uid="uid://1p8us1t0s4hq" path="res://scripts/examples/DirectedGraphExamples.gd" id="1_kmncd"]
+[ext_resource type="Script" uid="uid://cc3th0i4bmqka" path="res://scripts/tests/TestSocialGraph.gd" id="1_kmncd"]
 
 [node name="TestSocialGraph" type="Node"]
 script = ExtResource("1_kmncd")
