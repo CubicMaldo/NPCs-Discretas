@@ -14,9 +14,17 @@ config/name="GrafosDiscretas"
 config/features=PackedStringArray("4.5", "Mobile")
 config/icon="res://icon.svg"
 
+[autoload]
+
+SignalLens="*res://addons/signal_lens/autoload/signal_lens_autoload.gd"
+
 [dotnet]
 
 project/assembly_name="GrafosDiscretas"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/signal_lens/plugin.cfg")
 
 [rendering]
 

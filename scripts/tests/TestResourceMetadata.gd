@@ -1,4 +1,5 @@
 ## Smoke test para verificar el sistema de metadata basado en Resources.
+@tool
 extends Node
 
 func _ready() -> void:
@@ -21,8 +22,6 @@ func _ready() -> void:
 	
 	if leaked_objects > 50:
 		push_warning("Possible memory leak: %d objects not freed" % leaked_objects)
-	
-	get_tree().quit()
 
 
 func test_resource_metadata() -> void:

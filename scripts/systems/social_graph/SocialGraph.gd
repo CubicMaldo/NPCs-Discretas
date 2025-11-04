@@ -8,8 +8,6 @@
 class_name SocialGraph
 extends Graph
 
-const GraphAlgo = preload("res://scripts/utils/GraphAlgorithms.gd")
-
 ## Emitido cuando se registra una interacción y se actualiza la familiaridad.
 ## Emite las claves tal y como se almacenan en el grafo (NPC u id).
 signal interaction_registered(a_key, b_key, delta, new_weight)
@@ -18,10 +16,12 @@ signal interaction_registered_ids(a_id, b_id, delta, new_weight)
 
 ## Límite sugerido de relaciones simultáneas (Dunbar's number).
 const DUNBAR_LIMIT := 150
-const SAVE_VERSION := 2
 
 ## Tasa de decaimiento por segundo aplicada en `apply_decay`.
 var decay_rate_per_second: float = 0.0
+
+## Serializador para guardado/cargado de datos.
+var _serializer : SocialGraphSerializer
 
 ## Registro de NPCs activos mediante WeakRef: npc_id -> WeakRef(NPC).
 var _npc_registry: Dictionary = {}
@@ -34,6 +34,9 @@ var _connected_npcs: Dictionary = {}
 ## Índices cacheados para consultas rápidas.
 var _adjacency_by_key: Dictionary = {}
 var _adjacency_by_id: Dictionary = {}
+
+func _init() -> void:
+	_serializer = SocialGraphSerializer.new(self)
 
 
 ## Garantiza que un NPC quede registrado y monitorizado.
@@ -196,9 +199,20 @@ func _to_id(entity_or_key):
 	return null
 
 
-## Sobrecarga add_connection para usar terminología específica del dominio social.
-## Internamente, convierte "familiarity" a "weight" para la clase base Graph.
+## Sobrecarga add_connection para crear conexiones UNIDIRECCIONALES (dirigidas).
+## A diferencia de la clase base Graph que crea conexiones bidireccionales,
+## esta versión solo crea la arista A→B sin crear B→A automáticamente.
+## Internamente, convierte "familiarity" a "weight" para compatibilidad.
 func add_connection(a, b, familiarity: float, edge_metadata: Resource = null) -> void:
+	if a == b:
+		push_error("SocialGraph.add_connection: cannot connect node to itself")
+		return
+	
+	if familiarity < 0.0:
+		push_warning("SocialGraph.add_connection: negative familiarity %f for %s->%s, removing connection" % [familiarity, a, b])
+		remove_connection(a, b)
+		return
+	
 	var existed := has_edge(a, b)
 	
 	# Crear SocialEdgeMeta por defecto si no se proporciona metadata
@@ -206,7 +220,28 @@ func add_connection(a, b, familiarity: float, edge_metadata: Resource = null) ->
 	if meta == null:
 		meta = SocialEdgeMeta.new(familiarity)
 	
-	super.add_connection(a, b, familiarity, meta)  # familiarity se usa como weight en Graph
+	# Asegurar que ambos nodos existen
+	ensure_node(a)
+	ensure_node(b)
+	
+	# Crear/actualizar arista SOLO en dirección A→B (unidireccional)
+	var va: Vertex = vertices[a]
+	var vb: Vertex = vertices[b]
+	var edge: Edge = va.edges.get(b)
+	
+	if edge == null:
+		# Crear nueva arista unidireccional
+		edge = Edge.new(va, vb, familiarity)
+		edge.metadata = meta
+		va.edges[b] = edge  # Solo agregar en dirección A→B
+		# NO agregar vb.edges[a] para mantener el grafo dirigido
+		emit_signal("edge_added", a, b)
+	else:
+		# Actualizar arista existente
+		edge.weight = familiarity
+		edge.metadata = meta
+	
+	# Actualizar índices de cache
 	if has_edge(a, b):
 		var weight: float = float(get_edge(a, b))
 		_update_edge_indices(a, b, weight)
@@ -214,10 +249,24 @@ func add_connection(a, b, familiarity: float, edge_metadata: Resource = null) ->
 		_remove_edge_indices(a, b)
 
 
+## Elimina la conexión unidireccional A→B sin afectar B→A.
 func remove_connection(a, b) -> void:
+	var va: Vertex = vertices.get(a)
+	if va == null:
+		return
+	
 	var existed := has_edge(a, b)
-	super.remove_connection(a, b)
-	if existed and not has_edge(a, b):
+	var edge: Edge = va.edges.get(b)
+	if edge == null:
+		return
+	
+	# Solo remover en dirección A→B (unidireccional)
+	va.edges.erase(b)
+	# NO remover vb.edges[a] para mantener el grafo dirigido
+	
+	emit_signal("edge_removed", a, b)
+	
+	if existed:
 		_remove_edge_indices(a, b)
 
 
@@ -279,11 +328,11 @@ func _update_edge_indices(key_a, key_b, weight: float) -> void:
 	var vertex_b: Vertex = get_vertex(key_b)
 	var actual_key_a = vertex_a.key if vertex_a else key_a
 	var actual_key_b = vertex_b.key if vertex_b else key_b
-	_update_bidirectional_cache(_adjacency_by_key, actual_key_a, actual_key_b, weight)
+	_set_cache_entry(_adjacency_by_key, actual_key_a, actual_key_b, weight)
 	var id_a = _resolve_id_for_input(actual_key_a, vertex_a)
 	var id_b = _resolve_id_for_input(actual_key_b, vertex_b)
 	if id_a != null and id_b != null:
-		_update_bidirectional_cache(_adjacency_by_id, id_a, id_b, weight)
+		_set_cache_entry(_adjacency_by_id, id_a, id_b, weight)
 
 
 func _remove_edge_indices(key_a, key_b) -> void:
@@ -291,11 +340,11 @@ func _remove_edge_indices(key_a, key_b) -> void:
 	var vertex_b: Vertex = get_vertex(key_b)
 	var actual_key_a = vertex_a.key if vertex_a else key_a
 	var actual_key_b = vertex_b.key if vertex_b else key_b
-	_remove_bidirectional_cache(_adjacency_by_key, actual_key_a, actual_key_b)
+	_remove_cache_entry(_adjacency_by_key, actual_key_a, actual_key_b)
 	var id_a = _resolve_id_for_input(actual_key_a, vertex_a)
 	var id_b = _resolve_id_for_input(actual_key_b, vertex_b)
 	if id_a != null and id_b != null:
-		_remove_bidirectional_cache(_adjacency_by_id, id_a, id_b)
+		_remove_cache_entry(_adjacency_by_id, id_a, id_b)
 
 
 func _update_bidirectional_cache(store: Dictionary, a_key, b_key, weight: float) -> void:
@@ -450,8 +499,10 @@ func get_cached_neighbors(npc_or_id) -> Dictionary:
 	var key = _graph_key_from_input(npc_or_id)
 	if key == null:
 		return {}
-	var bucket: Dictionary = _adjacency_by_key.get(key)
-	return bucket.duplicate(true) if bucket else {}
+	var bucket = _adjacency_by_key.get(key)
+	if bucket == null:
+		return {}
+	return bucket.duplicate(true)
 
 
 func get_cached_neighbors_ids(npc_or_id) -> Dictionary:
@@ -464,8 +515,10 @@ func get_cached_neighbors_ids(npc_or_id) -> Dictionary:
 		resolved_id = int(npc_or_id)
 	if resolved_id == null:
 		return {}
-	var bucket: Dictionary = _adjacency_by_id.get(resolved_id)
-	return bucket.duplicate(true) if bucket else {}
+	var bucket = _adjacency_by_id.get(resolved_id)
+	if bucket == null:
+		return {}
+	return bucket.duplicate(true)
 
 
 func get_cached_degree(npc_or_id) -> int:
@@ -493,7 +546,7 @@ func get_shortest_path(a, b) -> Dictionary:
 			"path": [],
 			"path_ids": []
 		}
-	var result: Dictionary = GraphAlgo.shortest_path(self, key_a, key_b)
+	var result: Dictionary = GraphAlgorithms.shortest_path(self, key_a, key_b)
 	var path: Array = result.get("path", [])
 	result["path_ids"] = _keys_to_ids(path)
 	return result
@@ -518,30 +571,93 @@ func get_mutual_connections(a, b, min_weight := 0.0) -> Dictionary:
 			"jaccard_index": 0.0,
 			"entries_ids": []
 		}
-	var result: Dictionary = GraphAlgo.mutual_metrics(self, key_a, key_b, float(min_weight))
+	var result: Dictionary = GraphAlgorithms.mutual_metrics(self, key_a, key_b, float(min_weight))
 	var entries: Array = result.get("entries", [])
 	result["entries_ids"] = _convert_entries_neighbors_to_ids(entries)
 	return result
 
 
+## Propaga un "rumor" desde un NPC inicial usando BFS con atenuación.
+## Utiliza BFS como base y aplica atenuación por nivel y familiaridad de relaciones.
+## 
+## Argumentos:
+## - seed_actor: NPC o id inicial del rumor
+## - steps: Número máximo de "saltos" permitidos (niveles BFS)
+## - attenuation: Factor de atenuación por salto (0.0-1.0, default 0.6 = 60%)
+## - min_strength: Fuerza mínima para continuar propagación (default 0.05 = 5%)
+## - use_ids: Si true, incluye versiones con ids en el resultado
+##
+## Retorna: { seed, steps, reached: Array, influence: Dictionary, reached_ids?, influence_ids?, seed_id? }
 func simulate_rumor(seed_actor, steps := 3, attenuation := 0.6, min_strength := 0.05, use_ids := true) -> Dictionary:
 	var seed_key = _graph_key_from_input(seed_actor)
-	if seed_key == null or not has_vertex(seed_key):
-		return {
-			"seed": seed_actor,
-			"steps": int(steps),
-			"reached": [],
-			"influence": {},
-			"reached_ids": [] if use_ids else [],
-			"influence_ids": {} if use_ids else {}
-		}
-	var result: Dictionary = GraphAlgo.propagate_rumor(self, seed_key, int(steps), float(attenuation), float(min_strength))
-	var reached: Array = result.get("reached", [])
+	
+	var result := {
+		"seed": seed_actor,
+		"steps": int(steps),
+		"reached": [],
+		"influence": {}
+	}
+	
 	if use_ids:
-		result["reached_ids"] = _keys_to_ids(reached)
-		var influence: Dictionary = result.get("influence", {})
+		result["reached_ids"] = []
+		result["influence_ids"] = {}
+	
+	if seed_key == null or not has_vertex(seed_key):
+		return result
+	
+	# Realizar BFS para obtener estructura de niveles
+	var bfs_result: Dictionary = GraphAlgorithms.bfs(self, seed_key)
+	var levels: Dictionary = bfs_result.get("levels", {})
+	
+	# Calcular influencia usando BFS por niveles
+	var influence: Dictionary = {}
+	influence[seed_key] = 1.0
+	
+	# Procesar nodos por nivel (BFS garantiza orden)
+	var visited_keys: Array = bfs_result.get("visited", [])
+	
+	for current in visited_keys:
+		var current_level: int = int(levels.get(current, 0))
+		
+		# Si excedemos el número de pasos, detener
+		if current_level >= int(steps):
+			continue
+		
+		var strength: float = float(influence.get(current, 0.0))
+		if strength <= 0.0:
+			continue
+		
+		# Propagar a vecinos
+		var neighbor_weights: Dictionary = get_neighbor_weights(current)
+		for neighbor in neighbor_weights.keys():
+			# Solo procesar vecinos en el siguiente nivel (BFS)
+			var neighbor_level: int = int(levels.get(neighbor, -1))
+			if neighbor_level != current_level + 1:
+				continue
+			
+			var weight: float = float(neighbor_weights[neighbor])
+			# Normalizar familiaridad (asumiendo escala 0-100)
+			var normalized_weight: float = clamp(weight / 100.0, 0.0, 1.0)
+			var propagated: float = strength * float(attenuation) * normalized_weight
+			
+			if propagated < float(min_strength):
+				continue
+			
+			# Actualizar si la influencia es mayor
+			var existing: float = float(influence.get(neighbor, 0.0))
+			if propagated > existing:
+				influence[neighbor] = propagated
+	
+	result["seed"] = seed_key
+	result["influence"] = influence
+	result["reached"] = influence.keys()
+	
+	# Agregar versiones con ids si se solicita
+	if use_ids:
+		result["reached_ids"] = _keys_to_ids(result["reached"])
 		result["influence_ids"] = _map_influence_to_ids(influence)
-		result["seed_id"] = _to_id(result.get("seed", seed_key))
+		result["seed_id"] = _to_id(seed_key)
+	
 	return result
 
 
@@ -794,188 +910,33 @@ func apply_decay(delta_seconds: float) -> Dictionary:
 
 
 ## Serializa el estado completo del grafo a un diccionario.
+## Delega al serializador interno.
 func serialize() -> Dictionary:
-	return {
-		"version": SAVE_VERSION,
-		"timestamp": Time.get_unix_time_from_system(),
-		"nodes": _serialize_nodes(),
-		"edges": _serialize_edges(),
-		"metadata": {
-			"node_count": get_node_count(),
-			"edge_count": get_edge_count(),
-			"avg_familiarity": GraphAlgo.average_weight(self)
-		}
-	}
-
-
-func _serialize_nodes() -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	for key in vertices.keys():
-		var vertex: Vertex = vertices[key]
-		if vertex == null:
-			continue
-		var v_id := vertex.id
-		if v_id == -1:
-			var inferred = _to_id(key)
-			if inferred != null:
-				v_id = int(inferred)
-		
-		# Serializar metadata usando to_dict() si es VertexMeta o subclase
-		var meta_dict: Dictionary = {}
-		if vertex.meta != null:
-			if vertex.meta.has_method("to_dict"):
-				meta_dict = vertex.meta.to_dict()
-			else:
-				# Si es otro tipo de Resource, intentar var2str o advertir
-				push_warning("Vertex metadata no tiene método to_dict(), no se serializará completamente")
-		
-		var entry: Dictionary = {
-			"id": v_id,
-			"meta": meta_dict
-		}
-		entry["has_object"] = typeof(key) == TYPE_OBJECT
-		out.append(entry)
-	return out
-
-
-func _serialize_edges() -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	for edge_info in get_edges():
-		var key_a = edge_info["source"]
-		var key_b = edge_info["target"]
-		var vertex_a: Vertex = get_vertex(key_a)
-		var vertex_b: Vertex = get_vertex(key_b)
-		if vertex_a == null or vertex_b == null:
-			continue
-		var id_a := vertex_a.id
-		var id_b := vertex_b.id
-		if id_a == -1 or id_b == -1:
-			continue
-		var weight: float = float(edge_info["weight"])
-		out.append({
-			"a": id_a,
-			"b": id_b,
-			"w": round(weight * 100.0) / 100.0
-		})
-	return out
+	return _serializer.serialize()
 
 
 ## Reconstruye el grafo a partir de datos serializados.
+## Delega al serializador interno.
 func deserialize(data: Dictionary) -> bool:
-	if data.is_empty():
-		return false
-	var payload := data
-	var version := int(payload.get("version", 1))
-	if version < SAVE_VERSION:
-		payload = _migrate_from_v1(payload)
-	var validation := validate_loaded_data(payload)
-	if validation.size() > 0:
-		var packed := PackedStringArray(validation)
-		push_error("SocialGraph.deserialize: invalid data -> %s" % [", ".join(packed)])
-		return false
-	clear()
-	var nodes: Array = payload.get("nodes", [])
-	for node_dict in nodes:
-		var npc_id := int(node_dict.get("id", -1))
-		if npc_id == -1:
-			continue
-		var meta_dict: Dictionary = node_dict.get("meta", {})
-		# Crear NPCVertexMeta desde el diccionario guardado
-		var npc_meta: NPCVertexMeta = NPCVertexMeta.from_dict(meta_dict)
-		npc_meta.loaded_from_save = true
-		var vertex := super.ensure_node(npc_id, npc_meta)
-		if vertex:
-			vertex.id = npc_id
-			_pending_vertices[npc_id] = vertex
-	var edges: Array = payload.get("edges", [])
-	for edge_dict in edges:
-		var a_id := int(edge_dict.get("a", -1))
-		var b_id := int(edge_dict.get("b", -1))
-		var weight := float(edge_dict.get("w", 0.0))
-		if a_id == -1 or b_id == -1:
-			continue
-		connect_npcs(a_id, b_id, weight)
-	return true
+	return _serializer.deserialize(data)
 
 
 ## Guarda el grafo en disco en formato JSON opcionalmente comprimido.
+## Delega al serializador interno.
 func save_to_file(path: String, compressed := true) -> Error:
-	var data := serialize()
-	var json := JSON.stringify(data)
-	var file: FileAccess
-	if compressed:
-		file = FileAccess.open_compressed(path, FileAccess.WRITE, FileAccess.COMPRESSION_GZIP)
-	else:
-		file = FileAccess.open(path, FileAccess.WRITE)
-	var open_error := FileAccess.get_open_error()
-	if open_error != OK or file == null:
-		return open_error
-	file.store_string(json)
-	file.close()
-	return OK
+	return _serializer.save_to_file(path, compressed)
 
 
 ## Carga el grafo desde disco, detectando automáticamente compresión.
+## Delega al serializador interno.
 func load_from_file(path: String) -> Error:
-	var file := FileAccess.open(path, FileAccess.READ)
-	var err := FileAccess.get_open_error()
-	var text := ""
-	if err == OK and file:
-		text = file.get_as_text()
-		file.close()
-	else:
-		file = FileAccess.open_compressed(path, FileAccess.READ, FileAccess.COMPRESSION_GZIP)
-		err = FileAccess.get_open_error()
-		if err != OK or file == null:
-			return err
-		text = file.get_as_text()
-		file.close()
-	var parsed = JSON.parse_string(text)
-	if typeof(parsed) != TYPE_DICTIONARY:
-		return ERR_PARSE_ERROR
-	return OK if deserialize(parsed) else ERR_INVALID_DATA
-
-
-func _migrate_from_v1(data: Dictionary) -> Dictionary:
-	# Placeholder para migraciones futuras.
-	return data
+	return _serializer.load_from_file(path)
 
 
 ## Verifica que la estructura cargada contenga información válida.
+## Delega al serializador interno.
 func validate_loaded_data(data: Dictionary) -> Array[String]:
-	var issues: Array[String] = []
-	var version := int(data.get("version", SAVE_VERSION))
-	if version > SAVE_VERSION:
-		issues.append("Unsupported save version %d" % [version])
-	if not data.has("nodes") or not data.has("edges"):
-		issues.append("Missing nodes or edges arrays")
-	elif typeof(data["nodes"]) != TYPE_ARRAY or typeof(data["edges"]) != TYPE_ARRAY:
-		issues.append("Nodes or edges are not arrays")
-	else:
-		var known_ids: Dictionary = {}
-		for node_dict in data["nodes"]:
-			if typeof(node_dict) != TYPE_DICTIONARY:
-				issues.append("Node entry is not a Dictionary")
-				continue
-			var nid := int(node_dict.get("id", -1))
-			if nid == -1:
-				issues.append("Node missing id")
-			else:
-				known_ids[nid] = true
-		for edge_dict in data["edges"]:
-			if typeof(edge_dict) != TYPE_DICTIONARY:
-				issues.append("Edge entry is not a Dictionary")
-				continue
-			var a_id := int(edge_dict.get("a", -1))
-			var b_id := int(edge_dict.get("b", -1))
-			var weight := float(edge_dict.get("w", 0.0))
-			if a_id == -1 or b_id == -1:
-				issues.append("Edge missing endpoint ids")
-			elif not known_ids.has(a_id) or not known_ids.has(b_id):
-				issues.append("Edge references unknown node (%d, %d)" % [a_id, b_id])
-			if weight < 0.0:
-				issues.append("Edge weight below zero between %d and %d" % [a_id, b_id])
-	return issues
+	return _serializer.validate_loaded_data(data)
 
 
 ## Ejecuta validaciones de integridad sobre el grafo actual.

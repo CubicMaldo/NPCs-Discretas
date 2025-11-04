@@ -1,5 +1,4 @@
 class_name GraphAlgorithms
-
 const INF := 1.0e18
 
 ## Devuelve el peso promedio de todas las aristas del grafo.
@@ -115,47 +114,47 @@ static func mutual_metrics(graph: Graph, a, b, min_weight: float = 0.0) -> Dicti
 	return result
 
 
-static func propagate_rumor(graph: Graph, seed_key, steps: int, attenuation: float, min_strength: float) -> Dictionary:
+## Realiza un recorrido BFS (Breadth-First Search) desde un nodo inicial.
+## Retorna un diccionario con información del recorrido:
+## - visited: Array de claves visitadas en orden BFS
+## - levels: Dictionary { clave: nivel } indicando la distancia desde el origen
+## - parent: Dictionary { clave: padre } para reconstruir caminos
+static func bfs(graph: Graph, start_key) -> Dictionary:
 	var result := {
-		"seed": seed_key,
-		"steps": steps,
-		"reached": [],
-		"influence": {}
+		"visited": [],
+		"levels": {},
+		"parent": {}
 	}
-	if graph == null or seed_key == null or not graph.has_vertex(seed_key):
+	
+	if graph == null or start_key == null or not graph.has_vertex(start_key):
 		return result
-	var influence: Dictionary = {}
-	influence[seed_key] = 1.0
-	var frontier: Array = [{"key": seed_key, "strength": 1.0}]
-	for step in range(max(steps, 0)):
-		if frontier.is_empty():
-			break
-		var next_frontier_map: Dictionary = {}
-		for entry in frontier:
-			var current = entry.get("key")
-			var strength: float = float(entry.get("strength", 0.0))
-			if strength <= 0.0:
+	
+	var queue: Array = [start_key]
+	var visited: Dictionary = {}
+	var levels: Dictionary = {}
+	var parent: Dictionary = {}
+	
+	visited[start_key] = true
+	levels[start_key] = 0
+	
+	while not queue.is_empty():
+		var current = queue.pop_front()
+		result["visited"].append(current)
+		
+		var current_level: int = int(levels.get(current, 0))
+		var neighbor_weights: Dictionary = graph.get_neighbor_weights(current)
+		
+		for neighbor in neighbor_weights.keys():
+			if visited.has(neighbor):
 				continue
-			var neighbor_weights: Dictionary = graph.get_neighbor_weights(current)
-			for neighbor in neighbor_weights.keys():
-				if neighbor == current:
-					continue
-				var weight: float = float(neighbor_weights[neighbor])
-				var propagated: float = strength * attenuation * _normalized_weight(weight)
-				if propagated < min_strength:
-					continue
-				var existing: float = float(influence.get(neighbor, 0.0))
-				if propagated > existing:
-					influence[neighbor] = propagated
-				if step < steps - 1 and propagated >= min_strength:
-					var queued: float = float(next_frontier_map.get(neighbor, 0.0))
-					if propagated > queued:
-						next_frontier_map[neighbor] = propagated
-		frontier = []
-		for neighbor in next_frontier_map.keys():
-			frontier.append({"key": neighbor, "strength": next_frontier_map[neighbor]})
-	result["influence"] = influence
-	result["reached"] = influence.keys()
+			
+			visited[neighbor] = true
+			levels[neighbor] = current_level + 1
+			parent[neighbor] = current
+			queue.append(neighbor)
+	
+	result["levels"] = levels
+	result["parent"] = parent
 	return result
 
 
@@ -190,9 +189,3 @@ static func _jaccard_index(keys_a: Array, keys_b: Array) -> float:
 	if union_size <= 0.0:
 		return 0.0
 	return float(intersection) / union_size
-
-
-static func _normalized_weight(weight: float) -> float:
-	if weight <= 0.0:
-		return 0.0
-	return clamp(weight / 100.0, 0.0, 1.0)

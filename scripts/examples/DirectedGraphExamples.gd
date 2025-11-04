@@ -4,9 +4,8 @@ extends Node
 ## Este script contiene ejemplos prácticos y casos de uso comunes del nuevo sistema
 ## de grafos dirigidos. Ejecuta `run_all_examples()` para ver todos los ejemplos.
 
-const SocialGraphClass = preload("res://scripts/systems/SocialGraph.gd")
-
 ## Ejecuta todos los ejemplos de manera secuencial.
+
 func run_all_examples() -> void:
 	print("\n" + "=".repeat(80))
 	print("EJEMPLOS DE GRAFOS DIRIGIDOS - SISTEMA SOCIAL")
@@ -42,8 +41,8 @@ func example_1_basic_directed_edge() -> void:
 	print("Bob conoce a Alice: ", graph.has_edge("Bob", "Alice"))  # false
 	
 	# Obtener familiaridad
-	var alice_to_bob = graph.get_familiarity("Alice", "Bob")
-	var bob_to_alice = graph.get_familiarity("Bob", "Alice", 0.0)
+	var alice_to_bob = graph.get_edge("Alice", "Bob") if graph.has_edge("Alice", "Bob") else 0.0
+	var bob_to_alice = graph.get_edge("Bob", "Alice") if graph.has_edge("Bob", "Alice") else 0.0
 	
 	print("Familiaridad Alice→Bob: ", alice_to_bob)  # 75.0
 	print("Familiaridad Bob→Alice: ", bob_to_alice)  # 0.0 (no existe)
@@ -71,12 +70,12 @@ func example_2_bidirectional_relationship() -> void:
 	
 	# Verificar relaciones bidireccionales
 	print("Alice ↔ Bob:")
-	print("  Alice→Bob: ", graph.get_familiarity("Alice", "Bob"))  # 80.0
-	print("  Bob→Alice: ", graph.get_familiarity("Bob", "Alice"))  # 80.0
+	print("  Alice→Bob: ", graph.get_edge("Alice", "Bob"))  # 80.0
+	print("  Bob→Alice: ", graph.get_edge("Bob", "Alice"))  # 80.0
 	
 	print("Carol ↔ Dave:")
-	print("  Carol→Dave: ", graph.get_familiarity("Carol", "Dave"))  # 90.0
-	print("  Dave→Carol: ", graph.get_familiarity("Dave", "Carol"))  # 90.0
+	print("  Carol→Dave: ", graph.get_edge("Carol", "Dave"))  # 90.0
+	print("  Dave→Carol: ", graph.get_edge("Dave", "Carol"))  # 90.0
 
 
 ## Ejemplo 3: Confianza asimétrica (A confía en B más que B en A)
@@ -88,20 +87,21 @@ func example_3_asymmetric_trust() -> void:
 	# Alice confía mucho en Bob (80), pero Bob confía poco en Alice (40)
 	graph.connect_npcs_mutual("Alice", "Bob", 80.0, 40.0)
 	
-	var alice_to_bob = graph.get_familiarity("Alice", "Bob")
-	var bob_to_alice = graph.get_familiarity("Bob", "Alice")
+	var alice_to_bob = graph.get_edge("Alice", "Bob")
+	var bob_to_alice = graph.get_edge("Bob", "Alice")
 	
 	print("Relación asimétrica:")
 	print("  Alice→Bob (alta confianza): ", alice_to_bob)  # 80.0
 	print("  Bob→Alice (baja confianza): ", bob_to_alice)  # 40.0
 	print("  Diferencia: ", alice_to_bob - bob_to_alice)   # 40.0
 	
+	# TODO: Implementar get_strongest_path en SocialGraph
 	# Esto afecta algoritmos como el camino más fuerte
-	var path_a_to_b = graph.get_strongest_path("Alice", "Bob")
-	var path_b_to_a = graph.get_strongest_path("Bob", "Alice")
+	#var path_a_to_b = graph.get_strongest_path("Alice", "Bob")
+	#var path_b_to_a = graph.get_strongest_path("Bob", "Alice")
 	
-	print("Fuerza del camino Alice→Bob: ", path_a_to_b.strength)  # 0.8
-	print("Fuerza del camino Bob→Alice: ", path_b_to_a.strength)  # 0.4
+	#print("Fuerza del camino Alice→Bob: ", path_a_to_b.strength)  # 0.8
+	#print("Fuerza del camino Bob→Alice: ", path_b_to_a.strength)  # 0.4
 
 
 ## Ejemplo 4: Red de espionaje (agentes conocen objetivos, pero no al revés)
@@ -250,27 +250,31 @@ func example_8_shortest_path() -> void:
 ## Ejemplo 9: Camino más fuerte (máxima confianza acumulada)
 func example_9_strongest_path() -> void:
 	print("\n--- EJEMPLO 9: Camino Más Fuerte ---")
+	print("TODO: Implementar get_strongest_path en SocialGraph o GraphAlgorithms")
 	
-	var graph := SocialGraph.new()
+	# TODO: Este ejemplo requiere la implementación de get_strongest_path
+	# que calcule el camino con mayor confianza acumulada usando multiplicación de pesos
 	
-	# Crear red con diferentes niveles de confianza
-	# Camino directo: A→D (50% confianza)
-	# Camino via B: A→B→D (80% * 90% = 72% confianza)
-	graph.connect_npcs("A", "B", 80.0)
-	graph.connect_npcs("B", "D", 90.0)
-	graph.connect_npcs("A", "D", 50.0)
-	
-	var result = graph.get_strongest_path("A", "D")
-	
-	if result.reachable:
-		print("Camino más fuerte A→D:")
-		print("  Ruta: ", result.path)                      # ["A", "B", "D"]
-		print("  Fuerza: ", "%.2f" % result.strength)       # 0.72 (72%)
-		print("  Confianza: ", "%.0f" % (result.strength * 100), "%")
-		
-		# Comparar con camino directo
-		var direct = graph.get_familiarity("A", "D") / 100.0
-		print("  Directo A→D: ", "%.2f" % direct, " (", "%.0f" % (direct * 100), "%)")
+	#var graph := SocialGraph.new()
+	#
+	## Crear red con diferentes niveles de confianza
+	## Camino directo: A→D (50% confianza)
+	## Camino via B: A→B→D (80% * 90% = 72% confianza)
+	#graph.connect_npcs("A", "B", 80.0)
+	#graph.connect_npcs("B", "D", 90.0)
+	#graph.connect_npcs("A", "D", 50.0)
+	#
+	#var result = graph.get_strongest_path("A", "D")
+	#
+	#if result.reachable:
+	#	print("Camino más fuerte A→D:")
+	#	print("  Ruta: ", result.path)                      # ["A", "B", "D"]
+	#	print("  Fuerza: ", "%.2f" % result.strength)       # 0.72 (72%)
+	#	print("  Confianza: ", "%.0f" % (result.strength * 100), "%")
+	#	
+	#	# Comparar con camino directo
+	#	var direct = graph.get_edge("A", "D") / 100.0
+	#	print("  Directo A→D: ", "%.2f" % direct, " (", "%.0f" % (direct * 100), "%)")
 
 
 ## Ejemplo 10: Amigos mutuos en grafo dirigido
@@ -310,5 +314,5 @@ func example_10_mutual_friends() -> void:
 ## Función auxiliar para ejecutar los ejemplos desde la línea de comandos
 func _ready() -> void:
 	# Descomentar para ejecutar automáticamente al cargar el nodo
-	# run_all_examples()
+	run_all_examples()
 	pass
