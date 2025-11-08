@@ -7,7 +7,7 @@ Se ha refactorizado completamente el sistema de relaciones sociales para:
 - ✅ Extender capacidades (Relationship con múltiples dimensiones)
 - ✅ Desacoplar componentes (interfaces limpias)
 
-Nota: La ejecución de decisiones (Utility AI / Behavior Trees) se gestiona mediante addons externos y no forma parte del núcleo del repositorio. Añade el addon que prefieras en `addons/` y proporcionaré ejemplos de integración.
+Nota: La ejecución de decisiones (sistemas de decisión / Behavior Trees) se gestiona mediante addons externos y no forma parte del núcleo del repositorio. Añade el addon que prefieras en `addons/` y proporcionaré ejemplos de integración.
 
 ## 📖 Guías Disponibles
 
@@ -184,7 +184,7 @@ var friends = npc.get_friends_above(0.5)
 3. ✅ Ejecutar tests de validación
 
 ### Corto Plazo (ESTA SEMANA)
-1. Implementar Utility AI (seguir `NEXT_STEPS_UTILITY_AI.md`)
+1. Implementar un sistema de decisión (addon) (seguir `NEXT_STEPS_UTILITY_AI.md`)
 2. Crear 3-5 acciones básicas
 3. Calibrar pesos y parámetros
 

@@ -2,7 +2,7 @@
 
 ## ✅ Trabajo Completado
 
-He refactorizado completamente el sistema de relaciones sociales del proyecto NPCs-Discretas para eliminar redundancias y mejorar la modularidad. La ejecución de decisiones (behaviour / utility AI) se delega a addons externos y quedó fuera del núcleo del repositorio.
+He refactorizado completamente el sistema de relaciones sociales del proyecto NPCs-Discretas para eliminar redundancias y mejorar la modularidad. La ejecución de decisiones (behaviour / decision-system addons) se delega a addons externos y quedó fuera del núcleo del repositorio.
 
 ## 🎯 Problemas Solucionados
 
@@ -57,7 +57,7 @@ Documentación completa de la nueva arquitectura:
 - Principios de diseño (SSOT, separación de responsabilidades)
 - Diagramas de componentes y flujo de datos
 - Modelo de datos extendido
-- Patrones de integración con Utility AI y Behavior Trees
+   - Patrones de integración con sistemas de decisión (addons) y Behavior Trees
 - Ejemplos de código para casos comunes
 - Referencias completas
 
@@ -109,7 +109,7 @@ Notas:
 
 ## Decision / Integration Notes
 
-The refactor focuses on the social graph and social APIs only. Decision-making systems (Utility AI, Behavior Trees) are not implemented in the core. Use an external addon and adapt it to call the `SocialComponent` / `SocialGraphManager` APIs for relationship queries. Once you add your preferred addon to `addons/`, I can help write adapter nodes and glue code with examples.
+The refactor focuses on the social graph and social APIs only. Decision-making systems (decision-system addons, Behavior Trees) are not implemented in the core. Use an external addon and adapt it to call the `SocialComponent` / `SocialGraphManager` APIs for relationship queries. Once you add your preferred addon to `addons/`, I can help write adapter nodes and glue code with examples.
 
 ## 📊 Beneficios Medibles
 
@@ -173,7 +173,7 @@ Sistema modular, desacoplado y extensible que:
 - ✅ Garantiza consistencia de datos
 - ✅ Facilita testing
 - ✅ Reduce acoplamiento
-- ✅ Prepara para Utility AI y Behavior Trees
+- ✅ Prepara para integración con addons de decisión y behavior trees (addons)
 - ✅ Mantiene compatibilidad con código existente
 - ✅ Incluye documentación completa
 

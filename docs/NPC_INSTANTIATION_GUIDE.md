@@ -9,25 +9,19 @@ Los NPCs creados con `NPC.new()` no funcionarán correctamente si no se añaden 
 ### Paso a Paso
 
 ```gdscript
-# 1. Crear el NPC
-var npc := NPC.new()
+# Option A — Preferred: pass constructor args at creation time
+var npc := NPC.new(1, "Guard", social_manager)
+npc.name = "Guard"  # node name in the scene tree
 
-# 2. Configurar propiedades ANTES de añadir al árbol
-npc.npc_id = 1
-npc.npc_name = "Guard"
-npc.name = "Guard"  # Nombre del nodo en el árbol de escena
-
-# 3. Inyectar sistemas ANTES de añadir al árbol (importante!)
-npc.social_graph_manager = social_manager
-
-# 4. Añadir al árbol de escena (esto ejecuta _ready())
+# Then add to the scene tree to run _ready()
 add_child(npc)
-
-# 5. Esperar un frame para asegurar que _ready() completó
 await get_tree().process_frame
 
-# 6. Ahora el NPC está completamente inicializado y listo para usar
-print("NPC ready:", npc.social_component != null)  # true
+print("NPC ready:", npc.social_component != null)
+
+# Option B — Convenience helper: create, add and wait in one call
+var guard := await NPC.instantiate(self, 1, "Guard", social_manager)
+print("Guard ready:", guard.social_component != null)
 ```
 
 ## 🔍 ¿Por Qué Este Orden?
@@ -59,11 +53,10 @@ Si intentas usar el NPC inmediatamente después de `add_child()`:
 
 ## 📋 Checklist de Instanciación
 
-- [ ] `var npc := NPC.new()`
-- [ ] Configurar `npc_id`, `npc_name`, `name`
-[ ] Inyectar `social_graph_manager` (y opcionalmente un sistema de decisión proporcionado por un addon)
-- [ ] `add_child(npc)`
-- [ ] `await get_tree().process_frame`
+- [ ] `var npc := NPC.new(id, name, social_manager)`  # or use `await NPC.instantiate(parent, id, name, social_manager)`
+- [ ] `npc.name = "Guard"` (node name)
+- [ ] `add_child(npc)` (if you used NPC.new)
+- [ ] `await get_tree().process_frame` (or the instantiate helper already waited)
 - [ ] Ahora puedes usar el NPC
 
 ## 💡 Ejemplos Completos
@@ -71,18 +64,16 @@ Si intentas usar el NPC inmediatamente después de `add_child()`:
 ### Ejemplo 1: NPC Simple
 ```gdscript
 func create_npc(id: int, npc_name: String) -> NPC:
-    var npc := NPC.new()
-    npc.npc_id = id
-    npc.npc_name = npc_name
+    # Use the constructor-friendly new() signature
+    var npc := NPC.new(id, npc_name, social_manager)
     npc.name = npc_name
-    npc.social_graph_manager = social_manager
-    
+
     add_child(npc)
     await get_tree().process_frame
-    
+
     # Registrar en el grafo con metadata
     social_manager.ensure_npc(npc)
-    
+
     return npc
 
 # Uso
@@ -101,11 +92,8 @@ func create_multiple_npcs(count: int) -> Array[NPC]:
     
     # Crear todos los NPCs primero
     for i in range(count):
-        var npc := NPC.new()
-        npc.npc_id = i
-        npc.npc_name = "NPC_%d" % i
+        var npc := NPC.new(i, "NPC_%d" % i, social_manager)
         npc.name = "NPC_%d" % i
-        npc.social_graph_manager = social_manager
         
         add_child(npc)
         npcs.append(npc)
@@ -127,11 +115,8 @@ print("Created %d NPCs" % npcs.size())
 ### Ejemplo 3: Con Metadata Rica
 ```gdscript
 func create_npc_with_metadata(id: int, npc_name: String, role: String, faction: String) -> NPC:
-    var npc := NPC.new()
-    npc.npc_id = id
-    npc.npc_name = npc_name
+    var npc := NPC.new(id, npc_name, social_manager)
     npc.name = npc_name
-    npc.social_graph_manager = social_manager
     
     add_child(npc)
     await get_tree().process_frame
@@ -240,7 +225,7 @@ npc.global_position = Vector2(100, 100)
 ## 🚀 Próximo Paso
 
 Una vez que entiendas este flujo, estás listo para:
-1. Implementar Utility AI (ver `docs/NEXT_STEPS_UTILITY_AI.md`)
+1. Implementar un sistema de decisión (addon) (ver `docs/NEXT_STEPS_UTILITY_AI.md`)
 2. Integrar con beehave para Behavior Trees
 3. Crear sistemas más complejos
 

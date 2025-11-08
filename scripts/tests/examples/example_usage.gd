@@ -31,12 +31,9 @@ func example_multiple_npcs_interaction() -> void:
 	
 	# Crear y configurar múltiples NPCs
 	for i in range(npc_names.size()):
-		var npc := NPC.new()
-		npc.npc_id = 100 + i
-		npc.npc_name = npc_names[i]
+		var npc := NPC.new(100 + i, npc_names[i], social_manager)
 		npc.name = npc_names[i]
-		npc.social_graph_manager = social_manager
-		
+
 		add_child(npc)
 		npcs.append(npc)
 	
@@ -82,20 +79,12 @@ func example_multiple_npcs_interaction() -> void:
 ## Demuestra interacciones básicas entre NPCs utilizando SocialGraphManager.
 func example_basic_interaction() -> void:
 	# Crear NPCs y configurarlos ANTES de añadirlos al árbol
-	var guard := NPC.new()
-	guard.npc_id = 1
-	guard.npc_name = "Guard"
+	var guard := NPC.new(1, "Guard", social_manager)
 	guard.name = "Guard"  # Nombre del nodo
-	
-	var merchant := NPC.new()
-	merchant.npc_id = 2
-	merchant.npc_name = "Merchant"
+
+	var merchant := NPC.new(2, "Merchant", social_manager)
 	merchant.name = "Merchant"  # Nombre del nodo
-	
-	# Inyectar sistemas ANTES de añadir al árbol (para que _ready() los use)
-	guard.social_graph_manager = social_manager
-	merchant.social_graph_manager = social_manager
-	
+
 	# Añadir al árbol de escena para que _ready() se ejecute
 	add_child(guard)
 	add_child(merchant)
@@ -193,14 +182,9 @@ func example_decay_and_cleanup() -> void:
 
 ## Demuestra el uso de metadata personalizada con custom_data.
 func example_custom_metadata() -> void:
-	var hero := NPC.new()
-	hero.npc_id = 10
-	hero.npc_name = "Hero"
+	var hero := NPC.new(10, "Hero", social_manager)
 	hero.name = "Hero"
-	
-	# Inyectar sistemas
-	hero.social_graph_manager = social_manager
-	
+    
 	# Añadir al árbol para que _ready() se ejecute
 	add_child(hero)
 	await get_tree().process_frame

@@ -19,6 +19,22 @@ var current_position: Vector2 = Vector2.ZERO
 ## Referencias a sistemas externos (inyección de dependencias)
 var social_graph_manager: SocialGraphManager
 
+# Constructor-friendly initializer: allow passing key fields at `NPC.new(...)` time.
+func _init(_npc_id: int = -1, _npc_name: String = "", _social_graph_manager: SocialGraphManager = null) -> void:
+	# Safe to set these early; _ready() will still run later to finish setup.
+	npc_id = _npc_id
+	npc_name = _npc_name
+	social_graph_manager = _social_graph_manager
+
+static func instantiate(parent: Node, _npc_id: int = -1, _npc_name: String = "", _social_graph_manager: SocialGraphManager = null) -> NPC:
+	# Convenience helper that creates, injects systems, adds to `parent`, waits a frame and returns the ready NPC.
+	var npc: NPC = NPC.new(_npc_id, _npc_name, _social_graph_manager)
+	parent.add_child(npc)
+	await parent.get_tree().process_frame
+	if _social_graph_manager and _social_graph_manager.has_method("ensure_npc"):
+		_social_graph_manager.ensure_npc(npc)
+	return npc
+
 # Initializes runtime state and ensures component references are ready for use.
 func _ready() -> void:
 	current_position = global_position

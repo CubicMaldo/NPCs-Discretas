@@ -67,7 +67,7 @@
   - Interoperates with both object references and integer ids, exposing id-keyed snapshots for systems.
 
 - **Behavior / Decision Execution**
-  - Behavior/decision execution code has been removed from the core repository. The project expects external addons (for example, behavior tree or utility AI addons) to provide decision execution nodes/adapters.
+  - Behavior/decision execution code has been removed from the core repository. The project expects external addons (for example, behavior tree or decision-system addons) to provide decision execution nodes/adapters.
   - Integration examples and adapter code will be provided after you add the chosen addons to the `addons/` folder.
 
 - **NPC** (`scripts/entities/NPC.gd`)

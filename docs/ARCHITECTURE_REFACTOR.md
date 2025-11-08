@@ -2,7 +2,7 @@
 
 ## Visión General
 
-El sistema social ha sido rediseñado para eliminar redundancias y mejorar la modularidad. La ejecución de decisiones (behavior/utility AI) se manejará mediante addons externos y no forma parte del core del repositorio.
+El sistema social ha sido rediseñado para eliminar redundancias y mejorar la modularidad. La ejecución de decisiones (behavior / decision-system addons) se manejará mediante addons externos y no forma parte del core del repositorio.
 
 ## Principios de Diseño
 
@@ -90,7 +90,7 @@ El sistema social ha sido rediseñado para eliminar redundancias y mejorar la mo
 │    - Calcula weights para acciones                          │
 │    - Devuelve "interact" | "walk" | "ignore" | "idle"      │
 │                                                              │
-│  Preparado para reemplazo por Utility AI                    │
+│  Preparado para reemplazo por sistemas de decisión (addons)  │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -261,15 +261,15 @@ func _on_day_passed():
 
 ## Próximos Pasos Sugeridos
 
-1. **Implementar Utility AI completo:**
-   - `UtilityAI.gd` autoload
-   - `UtilityAction.gd` base class
-   - Actions concretas (GreetAction, IgnoreAction, HelpAction, InsultAction)
+1. **Implementar un sistema de decisión (addon) completo:**
+    - Un autoload/manager para el addon (p. ej. `decision_manager.gd`)
+    - Una base para acciones/acciones de scoring en el addon
+    - Actions/conditions concretas (GreetAction, IgnoreAction, HelpAction, InsultAction)
 
-2. **Crear UtilitySelector para beehave:**
-   - Nodo composite personalizado
-   - Integración con sistema de scoring
-   - Hysteresis y throttling
+2. **Crear integraciones y selectores para el addon elegido:**
+    - Nodo composite/selector personalizado para el addon (si aplica)
+    - Hooks para evaluación/scoring que llamen a `SocialComponent`/`SocialGraphManager`
+    - Hysteresis y throttling en el adapter si es necesario
 
 3. **Extender Relationship metadata:**
    - Agregar campos específicos del juego (loyalty, romance, rivalry)

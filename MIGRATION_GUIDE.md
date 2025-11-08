@@ -2,7 +2,7 @@
 
 ## Resumen de Cambios
 
-Se ha refactorizado el sistema de relaciones para eliminar redundancias y mejorar la modularidad. La ejecución de decisiones (behaviour/utility AI) se delega a addons externos y quedó fuera del núcleo del repositorio.
+Se ha refactorizado el sistema de relaciones para eliminar redundancias y mejorar la modularidad. La ejecución de decisiones (behavior / decision-system addons) se delega a addons externos y quedó fuera del núcleo del repositorio.
 
 ## Cambios Principales
 
@@ -90,13 +90,13 @@ func get_relationship_component() -> SocialComponent  # Acceso directo si necesa
 - Separación clara de responsabilidades
 - Menos código repetido
 - API más intuitiva
-- Preparado para Utility AI
+- Preparado para integración con addons de decisión
 
 **Archivo:** `scripts/entities/NPC.gd`
 
 ### ✅ 4. Decision execution moved to addons
 
-Behavior/decision execution was intentionally moved out of the core repository. Use a third-party addon (behavior trees or utility AI) and implement a small adapter node that calls into the `SocialComponent` / `SocialGraphManager` API to fetch relationship data. We'll provide integration examples once you add the chosen addons to the project.
+Behavior/decision execution was intentionally moved out of the core repository. Use a third-party addon (behavior trees or decision-system addons) and implement a small adapter node that calls into the `SocialComponent` / `SocialGraphManager` API to fetch relationship data. We'll provide integration examples once you add the chosen addons to the project.
 
 ## Guía de Migración para Código Existente
 
