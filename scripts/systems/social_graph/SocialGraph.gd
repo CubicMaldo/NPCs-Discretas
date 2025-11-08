@@ -243,7 +243,7 @@ func add_connection(a, b, familiarity: float, edge_metadata: Resource = null) ->
 	
 	# Actualizar índices de cache
 	if has_edge(a, b):
-		var weight: float = float(get_edge(a, b))
+		var weight: float = float(get_edge_weight(a, b))
 		_update_edge_indices(a, b, weight)
 	elif existed:
 		_remove_edge_indices(a, b)
@@ -710,18 +710,23 @@ func _enforce_dunbar_limit(key) -> void:
 	var degree := vertex.degree()
 	if degree <= DUNBAR_LIMIT:
 		return
+	# Collect neighbor relationships with their weights
 	var relationships: Array = []
 	for neighbor_key in vertex.edges.keys():
 		var edge: Edge = vertex.edges[neighbor_key]
 		var weight: float = edge.weight if edge else 0.0
 		relationships.append({"neighbor": neighbor_key, "weight": weight})
-	relationships.sort_custom(func(a, b): return a.weight > b.weight)
-	var idx := DUNBAR_LIMIT
-	while idx < relationships.size():
+
+	# Sort ascending by weight so weakest relationships are first
+	relationships.sort_custom(Callable(self, "_compare_weight_asc"))
+
+	# Remove weakest edges until we're within the Dunbar limit
+	var to_remove := degree - DUNBAR_LIMIT
+	var idx := 0
+	while idx < to_remove and idx < relationships.size():
 		var info = relationships[idx]
 		remove_connection(key, info.neighbor)
 		idx += 1
-
 
 ## Devuelve los N vecinos con mayor familiaridad: Array de diccionarios { key, weight }.
 func get_top_relations(npc_or_id, top_n := 3) -> Array:
@@ -731,6 +736,21 @@ func get_top_relations(npc_or_id, top_n := 3) -> Array:
 		pairs.append({"key": key, "weight": rels[key]})
 	pairs.sort_custom(func(a, b): return a.weight > b.weight)
 	return pairs.slice(0, int(top_n))
+
+
+## Comparator helper: sort relation dicts by weight ascending
+func _compare_weight_asc(a, b) -> int:
+	var aw := float(0.0)
+	var bw := float(0.0)
+	if typeof(a) == TYPE_DICTIONARY and a.has("weight"):
+		aw = float(a["weight"])
+	if typeof(b) == TYPE_DICTIONARY and b.has("weight"):
+		bw = float(b["weight"])
+	if aw < bw:
+		return -1
+	elif aw > bw:
+		return 1
+	return 0
 
 
 ## Devuelve claves de vecinos cuya familiaridad supera (>=) el umbral.
@@ -759,16 +779,12 @@ func register_interaction(a, b, base_delta := 0.0, options: Dictionary = {}) -> 
 	var vertex_b: Vertex = ensure_npc(b, meta_b)
 	var ka = vertex_a.key if vertex_a else _normalize_key(a)
 	var kb = vertex_b.key if vertex_b else _normalize_key(b)
-	var current := float(get_edge(ka, kb) if has_edge(ka, kb) else 0.0)
+	var current := float(get_edge_weight(ka, kb) if has_edge(ka, kb) else 0.0)
 	var d_a := 0.0
 	var d_b := 0.0
-	if a is NPC and a.has_method("_evaluate_interaction_delta"):
+	if a is NPC:
 		d_a = float(a._evaluate_interaction_delta(b))
-	elif a is Object and a and a.has_method("_evaluate_interaction_delta"):
-		d_a = float(a._evaluate_interaction_delta(b))
-	if b is NPC and b.has_method("_evaluate_interaction_delta"):
-		d_b = float(b._evaluate_interaction_delta(a))
-	elif b is Object and b and b.has_method("_evaluate_interaction_delta"):
+	if b is NPC:
 		d_b = float(b._evaluate_interaction_delta(a))
 	var eval_delta := (d_a + d_b) * 0.5
 	var total_delta := float(base_delta) + eval_delta
@@ -796,7 +812,7 @@ func register_interaction(a, b, base_delta := 0.0, options: Dictionary = {}) -> 
 func has_relationship_at_least(a, b, threshold: float) -> bool:
 	var ka = _normalize_key(a)
 	var kb = _normalize_key(b)
-	var w = get_edge(ka, kb)
+	var w = get_edge_weight(ka, kb)
 	return w != null and float(w) >= threshold
 
 
@@ -804,7 +820,7 @@ func has_relationship_at_least(a, b, threshold: float) -> bool:
 func break_if_below(a, b, threshold: float) -> bool:
 	var ka = _normalize_key(a)
 	var kb = _normalize_key(b)
-	var w = get_edge(ka, kb)
+	var w = get_edge_weight(ka, kb)
 	if w == null:
 		return false
 	if float(w) <= threshold:

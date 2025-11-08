@@ -1,16 +1,108 @@
 extends Node
 
+## Script de ejemplo que demuestra el uso correcto del sistema social con NPCs.
+## 
+## IMPORTANTE: Los NPCs necesitan estar en el árbol de escena para que _ready() se ejecute
+## y el SocialComponent se inicialice correctamente. Por eso:
+## 1. Creamos el NPC con NPC.new()
+## 2. Configuramos npc_id, npc_name y otros exports
+## 3. Inyectamos social_graph_manager ANTES de añadir al árbol
+## 4. Añadimos al árbol con add_child()
+## 5. Esperamos un frame con await get_tree().process_frame
+## 6. Ahora el NPC está listo para usar (social_component inicializado)
+
 @onready var social_manager: SocialGraphManager = $SocialGraphManager
+
+func _ready() -> void:
+	await example_basic_interaction()
+	print("\n=== Example completed ===\n")
+	
+	# Opcional: ejecutar otros ejemplos
+	# await example_custom_metadata()
+	# await example_multiple_npcs_interaction()
+
+
+## Ejemplo adicional: Interacciones múltiples entre varios NPCs
+func example_multiple_npcs_interaction() -> void:
+	print("\n=== Multiple NPCs Interaction Example ===")
+	
+	var npcs: Array[NPC] = []
+	var npc_names := ["Alice", "Bob", "Charlie"]
+	
+	# Crear y configurar múltiples NPCs
+	for i in range(npc_names.size()):
+		var npc := NPC.new()
+		npc.npc_id = 100 + i
+		npc.npc_name = npc_names[i]
+		npc.name = npc_names[i]
+		npc.social_graph_manager = social_manager
+		
+		add_child(npc)
+		npcs.append(npc)
+	
+	# Esperar que todos se inicialicen
+	await get_tree().process_frame
+	
+	# Registrar todos en el grafo
+	for npc in npcs:
+		social_manager.ensure_npc(npc)
+	
+	# Crear relaciones entre ellos
+	# Alice conoce bien a Bob
+	npcs[0].social_component.set_relationship(npcs[1], 0.8)
+	print("%s → %s: %.2f" % [npcs[0].npc_name, npcs[1].npc_name, npcs[0].get_familiarity(npcs[1])])
+	
+	# Bob conoce poco a Charlie
+	npcs[1].social_component.set_relationship(npcs[2], 0.3)
+	print("%s → %s: %.2f" % [npcs[1].npc_name, npcs[2].npc_name, npcs[1].get_familiarity(npcs[2])])
+	
+	# Alice y Bob interactúan
+	npcs[0].interact_with(npcs[1])
+	await get_tree().process_frame
+	
+	print("After interaction - %s → %s: %.2f" % [
+		npcs[0].npc_name, 
+		npcs[1].npc_name, 
+		npcs[0].get_familiarity(npcs[1])
+	])
+	
+	# Mostrar amigos de Alice
+	var alice_friends = npcs[0].get_friends_above(0.5)
+	print("\n%s's friends (>0.5 familiarity): %s" % [npcs[0].npc_name, alice_friends])
+	
+	# Mostrar la relación más fuerte de Bob
+	print("%s's strongest relationship: %.2f" % [npcs[1].npc_name, npcs[1].get_strongest_familiarity()])
+	
+	# Cleanup
+	for npc in npcs:
+		npc.queue_free()
+	
+	print("=== Multiple NPCs Example completed ===\n")
 
 ## Demuestra interacciones básicas entre NPCs utilizando SocialGraphManager.
 func example_basic_interaction() -> void:
+	# Crear NPCs y configurarlos ANTES de añadirlos al árbol
 	var guard := NPC.new()
 	guard.npc_id = 1
 	guard.npc_name = "Guard"
+	guard.name = "Guard"  # Nombre del nodo
+	
 	var merchant := NPC.new()
 	merchant.npc_id = 2
 	merchant.npc_name = "Merchant"
-
+	merchant.name = "Merchant"  # Nombre del nodo
+	
+	# Inyectar sistemas ANTES de añadir al árbol (para que _ready() los use)
+	guard.social_graph_manager = social_manager
+	merchant.social_graph_manager = social_manager
+	
+	# Añadir al árbol de escena para que _ready() se ejecute
+	add_child(guard)
+	add_child(merchant)
+	
+	# Esperar un frame para asegurar que _ready() se ejecutó
+	await get_tree().process_frame
+	
 	# Crear metadata tipada para los NPCs
 	var guard_meta := NPCVertexMeta.new()
 	guard_meta.id = 1
@@ -26,10 +118,13 @@ func example_basic_interaction() -> void:
 	merchant_meta.faction = "traders_guild"
 	merchant_meta.level = 5
 	
+	# Registrar con metadata
 	social_manager.ensure_npc(guard, guard_meta)
 	social_manager.ensure_npc(merchant, merchant_meta)
+	
+	# Registrar interacción
 	social_manager.register_interaction(guard, merchant, 5.0)
-	var affinity = social_manager.social_graph.get_edge(guard, merchant)
+	var affinity = social_manager.social_graph.get_edge_weight(guard, merchant)
 	print("Affinity: ", affinity)
 	
 	# Acceder a metadata del vértice
@@ -37,6 +132,17 @@ func example_basic_interaction() -> void:
 	if guard_vertex and guard_vertex.meta:
 		var meta := guard_vertex.meta as NPCVertexMeta
 		print("Guard faction: ", meta.faction, " Level: ", meta.level)
+	
+	# Usar la nueva API de SocialComponent
+	print("\n--- Usando SocialComponent API ---")
+	print("Guard familiarity with Merchant: ", guard.get_familiarity(merchant))
+	print("Merchant familiarity with Guard: ", merchant.get_familiarity(guard))
+	
+	# Interactuar usando el método interact_with
+	guard.interact_with(merchant)
+	await get_tree().process_frame
+	
+	print("After interaction - Guard → Merchant: ", guard.get_familiarity(merchant))
 
 
 ## Guarda y carga el grafo social aprovechando compresión opcional.
@@ -90,6 +196,14 @@ func example_custom_metadata() -> void:
 	var hero := NPC.new()
 	hero.npc_id = 10
 	hero.npc_name = "Hero"
+	hero.name = "Hero"
+	
+	# Inyectar sistemas
+	hero.social_graph_manager = social_manager
+	
+	# Añadir al árbol para que _ready() se ejecute
+	add_child(hero)
+	await get_tree().process_frame
 	
 	# Metadata con campos custom adicionales
 	var hero_meta := NPCVertexMeta.new()

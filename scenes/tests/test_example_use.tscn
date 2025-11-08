@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://dotank3cef14s"]
+
+[ext_resource type="Script" uid="uid://dnw64ibey4qk4" path="res://scripts/examples/example_usage.gd" id="1_vt2a0"]
+[ext_resource type="Script" uid="uid://bx5pi7mgsqpq3" path="res://scripts/systems/social_graph/SocialGraphManager.gd" id="2_6b5mi"]
+
+[node name="TestExampleUse" type="Node"]
+script = ExtResource("1_vt2a0")
+
+[node name="SocialGraphManager" type="Node" parent="."]
+script = ExtResource("2_6b5mi")
+metadata/_custom_type_script = "uid://bx5pi7mgsqpq3"

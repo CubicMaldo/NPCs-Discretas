@@ -23,7 +23,7 @@
 - `scripts/`
   - `core/` – Orchestration stubs (`GameManager.gd`, `TimeManager.gd`, `EventSystem.gd`).
   - `entities/` – NPC-focused scripts (`NPC.gd`, `RelationshipComponent.gd`, Resource definitions).
-  - `systems/` – Simulation subsystems (`SocialGraphManager.gd`, `BehaviorSystem.gd`).
+  - `systems/` – Simulation subsystems (`SocialGraphManager.gd`).
   - `states/` – Resource-based NPC states (`IdleState.gd`, `WalkState.gd`, `InteractState.gd`).
   - `ui/` – Future HUD/graph/log controllers.
   - `utils/` – Generic helpers (`Graph.gd`, `GraphAlgorithms.gd`, `Logger.gd`, `MathUtils.gd`, `Vertex.gd`, `Edge.gd`, `VertexMeta.gd`, `NPCVertexMeta.gd`).
@@ -66,19 +66,18 @@
   - Methods: `set_graph_manager`, `refresh_from_graph`, `update_familiarity`, `get_relationship`, `store_relationship`, `get_relationships`.
   - Interoperates with both object references and integer ids, exposing id-keyed snapshots for systems.
 
-- **BehaviorSystem** (`scripts/systems/BehaviorSystem.gd`)
-  - Scores candidate actions using relationship affinities, emotions, and personality modifiers.
-  - Subscribes to interaction/register events and can propose state transitions via `choose_action_for(npc)`.
-  - Notified of interactions via `notify_interaction(npc_a, npc_b)` to update decision-making context.
+- **Behavior / Decision Execution**
+  - Behavior/decision execution code has been removed from the core repository. The project expects external addons (for example, behavior tree or utility AI addons) to provide decision execution nodes/adapters.
+  - Integration examples and adapter code will be provided after you add the chosen addons to the `addons/` folder.
 
 - **NPC** (`scripts/entities/NPC.gd`)
   - CharacterBody2D node representing individual NPCs.
   - Exports: `npc_id`, `npc_name`, `personality` (Personality resource), `base_emotion` (Emotion resource), `relationship_archetype` (Relationship resource).
   - Auto-instantiates `RelationshipComponent` if not present.
-  - `set_systems(graph_manager, behavior)` injects dependencies and registers NPC in the social graph.
+  - `set_systems(graph_manager)` injects dependencies and registers NPC in the social graph.
   - `interact_with(other_npc)` handles direct interactions: notifies systems, evaluates interaction delta via `_evaluate_interaction_delta(other)`, updates local relationships.
   - `update_relationships()` syncs local cache from `SocialGraphManager`.
-  - `choose_action()` delegates to `BehaviorSystem` for state transitions.
+  - `choose_action()` currently defaults to idle; decision execution is expected from external addons.
 
 - **NPC State Machine** (`scripts/states/`)
   - Base class `NPCState` is a `Resource` with overridable lifecycle methods: `enter`, `exit`, `physics_process`, `evaluate`.
@@ -155,7 +154,7 @@ if path.reachable:
 npc_alice.interact_with(npc_bob)
 # 1. Evaluates interaction delta based on emotions/personality
 # 2. Updates familiarity in RelationshipComponent
-# 3. Notifies SocialGraphManager and BehaviorSystem
+# 3. Notifies SocialGraphManager
 # 4. Refreshes local cache from graph
 
 # Manual interaction registration with custom options
@@ -176,10 +175,10 @@ manager.register_interaction(npc_a, npc_b, 5.0, {
 - To add a new state:
   1) Create a script extending `NPCState` under `scripts/states/`.
   2) Implement lifecycle methods and export any tunable parameters.
-  3) Register via state transition logic in `BehaviorSystem.choose_action_for(npc)`.
+  3) Register via state transition logic in your chosen decision system (addon).
 
 ## Extending Personalities & Emotions
-- **Personality** (`scripts/entities/Personality.gd`) stores a `traits` dictionary usable by `BehaviorSystem` for action scoring modifiers.
+- **Personality** (`scripts/entities/Personality.gd`) stores a `traits` dictionary usable by external decision systems (addons) for action scoring modifiers.
 - **Emotion** (`scripts/entities/Emotion.gd`) holds `label` and `intensity`; NPCs duplicate it at runtime to avoid shared state.
 - **Relationship** (`scripts/entities/Relationship.gd`) defines `familiarity` and `partner_id`; resources can be used for authored defaults and serialization.
 
@@ -227,7 +226,7 @@ manager.register_interaction(npc_a, npc_b, 5.0, {
 - When iterating relationships, consider whether you need out-edges, in-edges, or both.
 
 ### Best Practices for NPC Systems
-- Inject dependencies via `set_systems(graph_manager, behavior)` after NPC instantiation.
+- Inject dependencies via `set_systems(graph_manager)` after NPC instantiation.
 - Use `RelationshipComponent` as the single source of truth for local relationship data.
 - Call `update_relationships()` or `refresh_from_graph()` after bulk graph changes.
 - Leverage `_evaluate_interaction_delta()` for context-aware relationship updates.

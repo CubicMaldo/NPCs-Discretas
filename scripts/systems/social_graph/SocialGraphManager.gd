@@ -68,7 +68,19 @@ func remove_npc(npc_or_id) -> void:
 ## IMPORTANTE: Esto crea/actualiza una arista dirigida A→B. Para relaciones bidireccionales,
 ## establece la familiaridad en ambas direcciones por separado.
 func set_familiarity(a, b, familiarity: float) -> void:
-	social_graph.set_familiarity(a, b, familiarity)
+	# Guard: ensure social_graph exists
+	if not social_graph:
+		return
+
+	# Try to get the existing directed edge A->B. If it doesn't exist, create it.
+	var edge := social_graph.get_edge_resource(a, b) as SocialEdgeMeta
+	if edge == null:
+		# connect_npcs will create the directed edge with the provided affinity/weight
+		social_graph.connect_npcs(a, b, familiarity)
+		return
+
+	# Edge exists: update its weight
+	edge.weight = familiarity
 
 ## Establece hostilidad explícitamente (arista dirigida).
 ## [br]
@@ -89,7 +101,14 @@ func break_if_below(a, b, threshold: float) -> bool:
 ## IMPORTANTE: En un grafo dirigido, esto devuelve el peso de la arista A→B únicamente.
 ## La arista B→A puede tener un peso diferente o no existir.
 func get_familiarity(a, b, default := 0.0) -> float:
-	return social_graph.get_familiarity(a, b, default)
+	# SocialGraph does not expose a direct `get_familiarity` helper; use get_edge and
+	# normalize the result to a float with a default when missing.
+	if not social_graph:
+		return float(default)
+	var w = social_graph.get_edge_weight(a, b)
+	if w == null:
+		return float(default)
+	return float(w)
 
 ## Devuelve relaciones (aristas salientes) usando las claves almacenadas (objetos o ids).
 ## [br]

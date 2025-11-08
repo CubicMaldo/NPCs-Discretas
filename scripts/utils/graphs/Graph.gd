@@ -227,7 +227,7 @@ func clear() -> void:
 # ============================================================================
 
 ## Devuelve el peso de la arista entre `a` y `b`, o `null` si no existe.
-func get_edge(a, b):
+func get_edge_weight(a, b):
 	var e = get_edge_resource(a, b)
 	return e.weight if e else null
 
