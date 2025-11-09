@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://coaljrc7mgut6"]
+
+[ext_resource type="Script" uid="uid://bilycvphujio6" path="res://addons/utility_ai/actions/action_bt.gd" id="1"]
+[ext_resource type="PackedScene" path="res://example/ai/bt/eat_bt.tscn" id="2"]
+
+[node name="ActionBTExample" type="Node"]
+script = ExtResource("1")
+bt_scene = ExtResource("2")
+
+[node name="BT" type="Node" parent="."]

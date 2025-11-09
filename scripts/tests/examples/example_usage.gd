@@ -14,7 +14,7 @@ extends Node
 @onready var social_manager: SocialGraphManager = $SocialGraphManager
 
 func _ready() -> void:
-	await example_basic_interaction()
+	await example_multiple_npcs_interaction()
 	print("\n=== Example completed ===\n")
 	
 	# Opcional: ejecutar otros ejemplos
@@ -184,7 +184,7 @@ func example_decay_and_cleanup() -> void:
 func example_custom_metadata() -> void:
 	var hero := NPC.new(10, "Hero", social_manager)
 	hero.name = "Hero"
-    
+	
 	# Añadir al árbol para que _ready() se ejecute
 	add_child(hero)
 	await get_tree().process_frame
