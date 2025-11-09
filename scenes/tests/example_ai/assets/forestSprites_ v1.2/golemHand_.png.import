@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://di3bi8q8htcrm"
-path="res://.godot/imported/golemHand_.png-21090ee5ad03fec12460363e13cd2101.ctex"
+path="res://.godot/imported/golemHand_.png-bdac6a340b7b24ba00fab4a5a81e81be.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/golemHand_.png"
-dest_files=["res://.godot/imported/golemHand_.png-21090ee5ad03fec12460363e13cd2101.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/golemHand_.png"
+dest_files=["res://.godot/imported/golemHand_.png-bdac6a340b7b24ba00fab4a5a81e81be.ctex"]
 
 [params]
 

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dboy3o56irwx8"
-path="res://.godot/imported/fungantHand_.png-182399e7da725b1e1782947fb8fab419.ctex"
+path="res://.godot/imported/fungantHand_.png-8f7f4ee490f7c98488dfecbe7fa68d96.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/fungantHand_.png"
-dest_files=["res://.godot/imported/fungantHand_.png-182399e7da725b1e1782947fb8fab419.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/fungantHand_.png"
+dest_files=["res://.godot/imported/fungantHand_.png-8f7f4ee490f7c98488dfecbe7fa68d96.ctex"]
 
 [params]
 

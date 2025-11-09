@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dlvvwmt3sbnxt"
-path="res://.godot/imported/gnomeHand_.png-631176b5480f480e5e7fc550bd3d4fb1.ctex"
+path="res://.godot/imported/gnomeHand_.png-5fd55d805ff5b0eda9b193a377447702.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/gnomeHand_.png"
-dest_files=["res://.godot/imported/gnomeHand_.png-631176b5480f480e5e7fc550bd3d4fb1.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/gnomeHand_.png"
+dest_files=["res://.godot/imported/gnomeHand_.png-5fd55d805ff5b0eda9b193a377447702.ctex"]
 
 [params]
 

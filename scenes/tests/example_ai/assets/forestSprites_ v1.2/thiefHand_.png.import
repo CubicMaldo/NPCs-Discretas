@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cxwjkms6aiw4i"
-path="res://.godot/imported/thiefHand_.png-3e58f31d33b68ab63b45e7b35c1a104c.ctex"
+path="res://.godot/imported/thiefHand_.png-b7e36d03141cc0f42b41a291a8008680.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/thiefHand_.png"
-dest_files=["res://.godot/imported/thiefHand_.png-3e58f31d33b68ab63b45e7b35c1a104c.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/thiefHand_.png"
+dest_files=["res://.godot/imported/thiefHand_.png-b7e36d03141cc0f42b41a291a8008680.ctex"]
 
 [params]
 

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://wn068lyx283k"
-path="res://.godot/imported/thief_.png-2fa5f1fc6ea5355926c1025a7cd103fd.ctex"
+path="res://.godot/imported/thief_.png-4b1d2ae62741109a9a7604886a3a5a7b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/thief_.png"
-dest_files=["res://.godot/imported/thief_.png-2fa5f1fc6ea5355926c1025a7cd103fd.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/thief_.png"
+dest_files=["res://.godot/imported/thief_.png-4b1d2ae62741109a9a7604886a3a5a7b.ctex"]
 
 [params]
 

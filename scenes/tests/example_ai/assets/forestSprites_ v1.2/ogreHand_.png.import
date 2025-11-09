@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c8i2r6m8yfpq5"
-path="res://.godot/imported/ogreHand_.png-5ea39e073301c5c92babe32155fcdf03.ctex"
+path="res://.godot/imported/ogreHand_.png-6bdd2769c61881cae00119c469cb9e55.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/ogreHand_.png"
-dest_files=["res://.godot/imported/ogreHand_.png-5ea39e073301c5c92babe32155fcdf03.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/ogreHand_.png"
+dest_files=["res://.godot/imported/ogreHand_.png-6bdd2769c61881cae00119c469cb9e55.ctex"]
 
 [params]
 

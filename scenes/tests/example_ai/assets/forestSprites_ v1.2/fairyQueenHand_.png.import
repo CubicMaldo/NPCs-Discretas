@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bte56fplvfs1b"
-path="res://.godot/imported/fairyQueenHand_.png-9dbaa6cc4122355382fe5aa7eab80ccb.ctex"
+path="res://.godot/imported/fairyQueenHand_.png-e5167d10abc15853f01b6fcdca13fab2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/fairyQueenHand_.png"
-dest_files=["res://.godot/imported/fairyQueenHand_.png-9dbaa6cc4122355382fe5aa7eab80ccb.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/fairyQueenHand_.png"
+dest_files=["res://.godot/imported/fairyQueenHand_.png-e5167d10abc15853f01b6fcdca13fab2.ctex"]
 
 [params]
 

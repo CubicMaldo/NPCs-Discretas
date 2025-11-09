@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bpnn2ofn1mgoa"
-path="res://.godot/imported/fFairyHand_.png-95eb06e78d75458763c5839d5a00bc70.ctex"
+path="res://.godot/imported/fFairyHand_.png-39cc5d9cedd3874b7a1192949f6761b4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/fFairyHand_.png"
-dest_files=["res://.godot/imported/fFairyHand_.png-95eb06e78d75458763c5839d5a00bc70.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/fFairyHand_.png"
+dest_files=["res://.godot/imported/fFairyHand_.png-39cc5d9cedd3874b7a1192949f6761b4.ctex"]
 
 [params]
 

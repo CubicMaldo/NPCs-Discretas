@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dhxl0pg5gubkl"
-path="res://.godot/imported/gnome_.png-77f0d61e97cc3c215daa32f713436de3.ctex"
+path="res://.godot/imported/gnome_.png-a827b68d0ea785b334c6b0c32eebccf7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/gnome_.png"
-dest_files=["res://.godot/imported/gnome_.png-77f0d61e97cc3c215daa32f713436de3.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/gnome_.png"
+dest_files=["res://.godot/imported/gnome_.png-a827b68d0ea785b334c6b0c32eebccf7.ctex"]
 
 [params]
 

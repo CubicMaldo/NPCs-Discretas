@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dwixp5aftdool"
-path="res://.godot/imported/centaurHand_.png-8546b0dc42ea12455a4df2846da6ea32.ctex"
+path="res://.godot/imported/centaurHand_.png-c3c00961a1521370e5c8bcb2cbde9cf0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/centaurHand_.png"
-dest_files=["res://.godot/imported/centaurHand_.png-8546b0dc42ea12455a4df2846da6ea32.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/centaurHand_.png"
+dest_files=["res://.godot/imported/centaurHand_.png-c3c00961a1521370e5c8bcb2cbde9cf0.ctex"]
 
 [params]
 

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dx0qrj01pg0hp"
-path="res://.godot/imported/bandit_.png-af56e9aa138ec8bad715f9cfed4caaf9.ctex"
+path="res://.godot/imported/bandit_.png-f36436b09b8fac05672594b1fbcc3630.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/bandit_.png"
-dest_files=["res://.godot/imported/bandit_.png-af56e9aa138ec8bad715f9cfed4caaf9.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/bandit_.png"
+dest_files=["res://.godot/imported/bandit_.png-f36436b09b8fac05672594b1fbcc3630.ctex"]
 
 [params]
 

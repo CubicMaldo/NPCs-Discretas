@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bl8gpqegm1em0"
-path="res://.godot/imported/fFairy_.png-ff41ccb395c1ec4467c2a651ac401db3.ctex"
+path="res://.godot/imported/fFairy_.png-5bad1a6bcd3ced8828f681f6a9ec899e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/fFairy_.png"
-dest_files=["res://.godot/imported/fFairy_.png-ff41ccb395c1ec4467c2a651ac401db3.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/fFairy_.png"
+dest_files=["res://.godot/imported/fFairy_.png-5bad1a6bcd3ced8828f681f6a9ec899e.ctex"]
 
 [params]
 

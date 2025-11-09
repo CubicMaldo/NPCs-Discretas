@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dyyc1omfei0og"
-path="res://.godot/imported/fHeroHand_ [elf].png-8168fd4ead064cfa4b1e3d91b436de41.ctex"
+path="res://.godot/imported/fHeroHand_ [elf].png-9a60a0dd1b7c50f4980ad47ead26a255.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/fHeroHand_ [elf].png"
-dest_files=["res://.godot/imported/fHeroHand_ [elf].png-8168fd4ead064cfa4b1e3d91b436de41.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/fHeroHand_ [elf].png"
+dest_files=["res://.godot/imported/fHeroHand_ [elf].png-9a60a0dd1b7c50f4980ad47ead26a255.ctex"]
 
 [params]
 

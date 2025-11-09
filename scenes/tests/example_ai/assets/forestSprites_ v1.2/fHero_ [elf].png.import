@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://disbutffmbybp"
-path="res://.godot/imported/fHero_ [elf].png-a7927c805d483f8fc1f08b424d5edd87.ctex"
+path="res://.godot/imported/fHero_ [elf].png-02b50b0b54bc76679186d700b2c5cc7e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/fHero_ [elf].png"
-dest_files=["res://.godot/imported/fHero_ [elf].png-a7927c805d483f8fc1f08b424d5edd87.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/fHero_ [elf].png"
+dest_files=["res://.godot/imported/fHero_ [elf].png-02b50b0b54bc76679186d700b2c5cc7e.ctex"]
 
 [params]
 

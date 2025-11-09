@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dgx4kbiog0kp7"
-path="res://.godot/imported/trollHand_.png-6c4a243c66c70f66ecc125903db2e66b.ctex"
+path="res://.godot/imported/trollHand_.png-95cee436a6b2c88e0fb92d921678e5f2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/trollHand_.png"
-dest_files=["res://.godot/imported/trollHand_.png-6c4a243c66c70f66ecc125903db2e66b.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/trollHand_.png"
+dest_files=["res://.godot/imported/trollHand_.png-95cee436a6b2c88e0fb92d921678e5f2.ctex"]
 
 [params]
 

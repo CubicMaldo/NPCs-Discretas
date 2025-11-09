@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bhcxj57lw15o3"
-path="res://.godot/imported/fungant_.png-4b3eceb0b81b4751200146abb0ddaa0c.ctex"
+path="res://.godot/imported/fungant_.png-316178a3f2601d217b6332ed60465907.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/fungant_.png"
-dest_files=["res://.godot/imported/fungant_.png-4b3eceb0b81b4751200146abb0ddaa0c.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/fungant_.png"
+dest_files=["res://.godot/imported/fungant_.png-316178a3f2601d217b6332ed60465907.ctex"]
 
 [params]
 

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bu14n2u4vy4bm"
-path="res://.godot/imported/forest_ [bridgeAnimatedTiles].png-24a8faa99f6648b901492179910ec54e.ctex"
+path="res://.godot/imported/forest_ [bridgeAnimatedTiles].png-a66bd60ca7d2ff0d46cad06b28adf7b0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forest_/forest_ [bridgeAnimatedTiles].png"
-dest_files=["res://.godot/imported/forest_ [bridgeAnimatedTiles].png-24a8faa99f6648b901492179910ec54e.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forest_/forest_ [bridgeAnimatedTiles].png"
+dest_files=["res://.godot/imported/forest_ [bridgeAnimatedTiles].png-a66bd60ca7d2ff0d46cad06b28adf7b0.ctex"]
 
 [params]
 

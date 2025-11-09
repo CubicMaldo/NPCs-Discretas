@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c4txeqbgxctv8"
-path="res://.godot/imported/troll_.png-5eca808d7504f8b52e8a17ba6625622a.ctex"
+path="res://.godot/imported/troll_.png-a7e302b26ea9f8fbecb43b1114a15f06.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/troll_.png"
-dest_files=["res://.godot/imported/troll_.png-5eca808d7504f8b52e8a17ba6625622a.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/troll_.png"
+dest_files=["res://.godot/imported/troll_.png-a7e302b26ea9f8fbecb43b1114a15f06.ctex"]
 
 [params]
 

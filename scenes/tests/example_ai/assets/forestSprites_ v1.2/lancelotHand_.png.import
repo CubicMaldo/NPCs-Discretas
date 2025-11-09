@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dgem4qn6p3thr"
-path="res://.godot/imported/lancelotHand_.png-51ffe3eaf8dbddf3fd5c4f1b657faf68.ctex"
+path="res://.godot/imported/lancelotHand_.png-d3f6adfc6ba51284ac36c7b1236f1f7e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/lancelotHand_.png"
-dest_files=["res://.godot/imported/lancelotHand_.png-51ffe3eaf8dbddf3fd5c4f1b657faf68.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/lancelotHand_.png"
+dest_files=["res://.godot/imported/lancelotHand_.png-d3f6adfc6ba51284ac36c7b1236f1f7e.ctex"]
 
 [params]
 

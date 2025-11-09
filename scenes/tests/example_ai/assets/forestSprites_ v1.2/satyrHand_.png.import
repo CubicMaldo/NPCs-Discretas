@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c5cioxrf3dgpl"
-path="res://.godot/imported/satyrHand_.png-8324d9667fe81f4a6ea1b77f492a3e0a.ctex"
+path="res://.godot/imported/satyrHand_.png-2d8e0d08ef5a3ad00a804005ec8e2f27.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/satyrHand_.png"
-dest_files=["res://.godot/imported/satyrHand_.png-8324d9667fe81f4a6ea1b77f492a3e0a.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/satyrHand_.png"
+dest_files=["res://.godot/imported/satyrHand_.png-2d8e0d08ef5a3ad00a804005ec8e2f27.ctex"]
 
 [params]
 

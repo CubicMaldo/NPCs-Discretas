@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d1s0lswqrn6wb"
-path="res://.godot/imported/banditHand_.png-49408439853cb1c2f8e420dae37d0a32.ctex"
+path="res://.godot/imported/banditHand_.png-de7f5573723c172156e6c76f08990da1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://example/assets/forestSprites_ v1.2/banditHand_.png"
-dest_files=["res://.godot/imported/banditHand_.png-49408439853cb1c2f8e420dae37d0a32.ctex"]
+source_file="res://scenes/tests/example_ai/assets/forestSprites_ v1.2/banditHand_.png"
+dest_files=["res://.godot/imported/banditHand_.png-de7f5573723c172156e6c76f08990da1.ctex"]
 
 [params]
 
