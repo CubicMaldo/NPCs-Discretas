@@ -1,0 +1,335 @@
+@startuml
+skinparam classAttributeIconSize 0
+hide empty members
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 80
+
+' Colores por categoría
+skinparam class {
+  BackgroundColor<<Godot>> #EEEEEE
+  BackgroundColor<<Core>> #E3F2FD
+  BackgroundColor<<Systems>> #FFF3E0
+  BackgroundColor<<AI>> #F3E5F5
+  BackgroundColor<<Utils>> #E8F5E9
+  BackgroundColor<<Tools>> #FFF9C4
+}
+
+' ==========================================
+' GODOT BASE (simplificado)
+' ==========================================
+abstract class RefCounted <<Godot>>
+abstract class Node <<Godot>>
+abstract class Control <<Godot>>
+abstract class CharacterBody2D <<Godot>>
+abstract class Resource <<Godot>>
+
+Control --|> Node
+CharacterBody2D --|> Node
+Resource --|> RefCounted
+
+' ==========================================
+' ENTIDADES CORE
+' ==========================================
+package "entities" <<Core>> {
+  class Emotion <<Resource>> {
+    +intensity: float
+    +label: String
+  }
+  
+  class Personality <<Resource>> {
+    +traits: Dictionary
+  }
+  
+  class Relationship <<Resource>> {
+    +partner_id: int
+    +familiarity: float
+    +trust: float
+    +hostility: float
+    +interaction_count: int
+    +last_interaction_time: float
+    +positive_interactions: int
+    +negative_interactions: int
+    +tags: Array[String]
+    +custom_data: Dictionary
+    +get_relationship_quality(): float
+    +record_positive_interaction()
+    +record_negative_interaction()
+    +apply_decay(delta_time: float, decay_rate: float)
+  }
+  
+  Emotion --|> Resource
+  Personality --|> Resource
+  Relationship --|> Resource
+  
+  class NPC <<CharacterBody2D>> {
+    +npc_id: int
+    +npc_name: String
+    +personality: Personality
+    +base_emotion: Emotion
+    +social_graph_manager: SocialGraphManager
+    +sprite: Sprite2D
+    +social_component: SocialComponent
+    +current_state: String
+    +current_emotion: Emotion
+    +current_position: Vector2
+    +_init(_npc_id: int, _npc_name: String, _social_graph_manager: SocialGraphManager)
+    +instantiate(parent: Node, _npc_id: int, _npc_name: String, _social_graph_manager: SocialGraphManager): NPC
+    +interact_with(other_npc: NPC)
+    +choose_action(): String
+    +set_systems(graph_manager: SocialGraphManager)
+    +get_familiarity(partner): float
+    +get_top_relationships(top_n: int): Array
+    +get_friends_above(threshold: float): Array
+  }
+  
+  class SocialComponent <<Node>> {
+    +owner_id: int
+    +break_threshold: float
+    +auto_register: bool
+    +set_graph_manager(manager: SocialGraphManager)
+    +get_relationship(partner): float
+    +get_all_relationships(): Dictionary
+    +set_relationship(partner, familiarity: float)
+    +update_familiarity(partner, delta: float)
+    +get_top_relationships(top_n: int): Array
+    +relationship_changed(partner_id: int, new_familiarity: float)
+    +relationship_broken(partner_id: int)
+  }
+  
+  class RelationshipComponent <<Node>> {
+    +owner_id: int
+    +break_threshold: float
+    +relationships: Dictionary
+    +social_graph_manager: SocialGraphManager
+    +default_relationship_template: Relationship
+    +set_graph_manager(manager: SocialGraphManager)
+    +add_relationship(partner, familiarity: float)
+    +update_familiarity(partner, delta: float)
+    +break_relationship(partner)
+    +refresh_from_graph()
+    +relationship_broken(partner_id: int)
+  }
+  
+  NPC --|> CharacterBody2D
+  SocialComponent --|> Node
+  RelationshipComponent --|> Node
+  NPC o-- SocialComponent
+  NPC o-- RelationshipComponent
+  NPC --> Personality
+  NPC --> Emotion
+  RelationshipComponent --> Relationship
+}
+
+' ==========================================
+' UTILIDADES - GRAFOS
+' ==========================================
+package "graphs" <<Utils>> {
+  class Graph <<RefCounted>> {
+    +vertices: Dictionary
+    +node_added(key)
+    +node_removed(key)
+    +edge_added(a, b)
+    +edge_removed(a, b)
+    +add_node(key, meta: Resource): Vertex
+    +ensure_node(key, meta: Resource): Vertex
+    +add_connection(a, b, weight: float, edge_metadata: Resource)
+    +remove_connection(a, b)
+    +get_edge_weight(a, b)
+    +get_neighbors(key): Array
+  }
+  
+  class Vertex <<RefCounted>> {
+    +key: Variant
+    +id: int
+    +edges: Dictionary
+    +meta: Resource
+    +get_neighbor_keys(): Array
+    +dispose()
+  }
+  
+  class Edge <<RefCounted>> {
+    +endpoint_a: Vertex
+    +endpoint_b: Vertex
+    +weight: float
+    +metadata: Resource
+    +other(endpoint): Variant
+    +has_endpoint(endpoint): bool
+  }
+  
+  class VertexMeta <<Resource>> {
+    +id: int
+    +display_name: String
+    +vertex_type: String
+    +custom_data: Dictionary
+    +to_dict(): Dictionary
+  }
+  
+  class EdgeMeta <<Resource>> {
+    +id: int
+    +edge_type: String
+    +weight: float
+    +created_at: int
+    +updated_at: int
+    +custom_data: Dictionary
+    +to_dict(): Dictionary
+  }
+  
+  class GraphAlgorithms {
+    +average_weight(graph: Graph): float
+    +shortest_path(graph: Graph, source, target): Dictionary
+    +mutual_metrics(graph: Graph, a, b, min_weight: float): Dictionary
+    +bfs(graph: Graph, start_key): Dictionary
+  }
+  
+  VertexMeta --|> Resource
+  EdgeMeta --|> Resource
+  Graph --|> RefCounted
+  Vertex --|> RefCounted
+  Edge --|> RefCounted
+  Graph *-- Vertex
+  Vertex *-- Edge
+}
+
+' ==========================================
+' SISTEMA SOCIAL
+' ==========================================
+package "social_graph" <<Systems>> {
+  class SocialGraphManager <<Node>> {
+    +social_graph: SocialGraph
+    +interaction_registered(a_key, b_key, new_familiarity)
+    +interaction_registered_ids(a_id, b_id, new_familiarity)
+    +ensure_npc(npc_or_id, meta: Resource)
+    +register_interaction(a, b, base_delta: float, options: Dictionary)
+    +add_connection(a, b, affinity: float, edge_metadata: Resource)
+    +add_connection_mutual(a, b, affinity_a_to_b: float, affinity_b_to_a: float)
+    +set_familiarity(a, b, familiarity: float)
+    +simulate_rumor(seed_actor, steps: int, attenuation: float, min_strength: float, use_ids: bool): Dictionary
+    +apply_decay(delta_seconds: float): Dictionary
+    +serialize_graph(): Dictionary
+    +save_to_file(path: String, compressed: bool): Error
+  }
+  
+  class SocialGraph <<Graph>> {
+    +DUNBAR_LIMIT: int
+    +decay_rate_per_second: float
+    +_serializer: SocialGraphSerializer
+    +_npc_registry: Dictionary
+    +_npc_to_vertex: Dictionary
+    +_pending_vertices: Dictionary
+    +_adjacency_by_key: Dictionary
+    +_adjacency_by_id: Dictionary
+    +ensure_npc(npc_or_id, meta: Resource): Vertex
+    +register_interaction(a, b, base_delta: float, options: Dictionary)
+    +connect_npcs(a, b, familiarity: float, edge_metadata: Resource)
+    +connect_npcs_mutual(a, b, affinity_a_to_b: float, affinity_b_to_a: Variant)
+    +break_relationship(a, b)
+    +apply_decay(delta_seconds: float): Dictionary
+    +cleanup_invalid_nodes(): int
+    +serialize(): Dictionary
+    +deserialize(data: Dictionary): bool
+    +save_to_file(path: String, compressed: bool): Error
+    +load_from_file(path: String): Error
+  }
+  
+  class SocialGraphSerializer <<RefCounted>> {
+    +serialize(): Dictionary
+    +deserialize(data: Dictionary): bool
+    +save_to_file(path: String, compressed: bool): Error
+    +load_from_file(path: String): Error
+    +validate_loaded_data(data: Dictionary): Array[String]
+  }
+  
+  class NPCVertexMeta <<VertexMeta>> {
+    +role: String
+    +faction: String
+    +level: int
+    +loaded_from_save: bool
+    +last_update_time: float
+  }
+  
+  class SocialEdgeMeta <<EdgeMeta>> {
+    +trust: float
+    +relationship_type: String
+    +interaction_count: int
+    +tags: Array[String]
+    +hostility: float
+    +update_from_interaction(delta_familiarity: float)
+  }
+  
+  SocialGraphManager --|> Node
+  SocialGraph --|> Graph
+  SocialGraphSerializer --|> RefCounted
+  SocialGraphManager *-- SocialGraph
+  SocialGraph *-- SocialGraphSerializer
+  SocialGraph --> NPC
+  SocialGraph --> NPCVertexMeta
+  SocialGraph --> SocialEdgeMeta
+  SocialGraphSerializer --> GraphAlgorithms
+  NPCVertexMeta --|> VertexMeta
+  SocialEdgeMeta --|> EdgeMeta
+}
+
+' ==========================================
+' IA UTILIDAD
+' ==========================================
+package "utility_ai" <<AI>> {
+  class UtilityAi <<Node>>
+  UtilityAi --|> Node
+  
+  class UtilityAiAgent <<UtilityAi>> {
+    +enabled: bool
+    +evaluate_actions()
+  }
+  
+  class UtilityAiAction <<UtilityAi>> {
+    +calculate_score()
+    +start()
+    +tick()
+  }
+  
+  class UtilityAiConsideration <<UtilityAi>> {
+    +curve: Curve
+    +score()
+  }
+  
+  class UtilityAiBlackboard <<Node>> {
+    +set_value()
+    +get_value()
+  }
+  
+  UtilityAiAgent --|> UtilityAi
+  UtilityAiAction --|> UtilityAi
+  UtilityAiConsideration --|> UtilityAi
+  UtilityAiBlackboard --|> Node
+  UtilityAiAgent o-- UtilityAiAction
+  UtilityAiAction --> UtilityAiConsideration
+}
+
+' ==========================================
+' TESTS Y TOOLS
+' ==========================================
+package "tools" <<Tools>> {
+  class TestSuiteBase <<Node>> {
+    +run_all_tests()
+    +assert_equal()
+  }
+  
+  class SignalLensDebugger <<Node>> {
+    +started()
+    +stopped()
+  }
+  
+  TestSuiteBase --|> Node
+  SignalLensDebugger --|> Node
+}
+
+' ==========================================
+' RELACIONES PRINCIPALES
+' ==========================================
+NPC --> SocialGraphManager
+SocialComponent --> SocialGraphManager
+RelationshipComponent --> SocialGraphManager
+SocialGraph --> NPC
+
+@enduml
