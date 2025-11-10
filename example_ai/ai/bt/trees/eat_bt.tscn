@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://dgr0panrq8k0t"]
+
+[ext_resource type="Script" uid="uid://bb0t2ovl7wifo" path="res://addons/beehave/nodes/beehave_tree.gd" id="1"]
+[ext_resource type="Script" uid="uid://drdqrif42drl4" path="res://example_ai/ai/bt/leaves/eat_leaf.gd" id="2_vg7ji"]
+
+[node name="EatBT" type="Node" node_paths=PackedStringArray("blackboard", "actor")]
+script = ExtResource("1")
+blackboard = NodePath("@Node@22660")
+actor = NodePath("..")
+
+[node name="EatLeaf" type="Node" parent="."]
+script = ExtResource("2_vg7ji")
