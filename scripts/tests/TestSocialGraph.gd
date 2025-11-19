@@ -21,6 +21,7 @@ func _register_tests() -> void:
 	add_test(Callable(self, "_test_shortest_path"), "Shortest path uses Dijkstra")
 	add_test(Callable(self, "_test_mutual_connections"), "Mutual friend analytics")
 	add_test(Callable(self, "_test_rumor_propagation"), "Rumor propagation reaches neighbors")
+	add_test(Callable(self, "_test_prim_integration"), "Prim MST integration")
 
 
 func _test_npc_registration() -> Dictionary:
@@ -155,3 +156,18 @@ func _test_rumor_propagation() -> Dictionary:
 	if not check_mid.get("passed", false):
 		return check_mid
 	return assert_float_approx(0.125, float(influence.get(3, 0.0)), 0.05, "Rumor propagation reaches neighbors")
+
+
+func _test_prim_integration() -> Dictionary:
+	# Ejecutar Prim sobre SocialGraph (vista combinada de aristas dirigidas->no dirigidas)
+	var graph := SocialGraph.new()
+	# Grafo simple: 1--2 (1), 2--3 (2), 1--3 (5) — crear relaciones mutuas para simetría
+	graph.connect_npcs_mutual(1, 2, 1.0, 1.0)
+	graph.connect_npcs_mutual(2, 3, 2.0, 2.0)
+	graph.connect_npcs_mutual(1, 3, 5.0, 5.0)
+
+	var res := GraphAlgorithms.prim_mst(graph, 1)
+
+	graph.clear()
+	var ok: bool = bool(res.get("reachable", false)) and res.get("edges", []).size() == 2 and abs(float(res.get("total_weight", 0.0)) - 3.0) < 0.001
+	return assert_true(ok, "Prim MST integration", "MST mismatch: %s" % [str(res)])

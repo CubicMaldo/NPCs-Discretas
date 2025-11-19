@@ -76,6 +76,52 @@ static func shortest_path(graph: Graph, source, target) -> Dictionary:
 	return result
 
 
+## Construye una representación no dirigida del grafo a partir de get_edges().
+## Esto unifica la vista para Graph (no dirigido) y SocialGraph (dirigido),
+## combinando aristas opuestas promediando sus pesos cuando ambos sentidos existen.
+static func _build_undirected_adjacency(graph: Graph) -> Dictionary:
+	var directed: Dictionary = {}
+	for e in graph.get_edges():
+		var a = e.get("source")
+		var b = e.get("target")
+		var w: float = float(e.get("weight", 0.0))
+		if a == null or b == null:
+			continue
+		if not directed.has(a):
+			directed[a] = {}
+		directed[a][b] = w
+
+	var undirected: Dictionary = {}
+	for a in directed.keys():
+		for b in directed[a].keys():
+			if a == b:
+				continue
+			# Evitar duplicados
+			if undirected.has(a) and undirected[a].has(b):
+				continue
+			var wab: float = float(directed[a][b])
+			var wba = null
+			if directed.has(b) and directed[b].has(a):
+				wba = directed[b][a]
+			var final_w: float = wab
+			if wba != null:
+				final_w = (wab + float(wba)) * 0.5
+			if not undirected.has(a):
+				undirected[a] = {}
+			if not undirected.has(b):
+				undirected[b] = {}
+			undirected[a][b] = final_w
+			undirected[b][a] = final_w
+
+	# Asegurar que vértices aislados estén presentes
+	if graph.has_method("get_nodes"):
+		for v in graph.get_nodes().keys():
+			if not undirected.has(v):
+				undirected[v] = {}
+
+	return undirected
+
+
 static func mutual_metrics(graph: Graph, a, b, min_weight: float = 0.0) -> Dictionary:
 	var result := {
 		"count": 0,
@@ -155,6 +201,85 @@ static func bfs(graph: Graph, start_key) -> Dictionary:
 	
 	result["levels"] = levels
 	result["parent"] = parent
+	return result
+	
+## Algoritmo de Prim para encontrar el Árbol de Expansión Mínima (MST).
+## Retorna un diccionario con:
+## - total_weight: Peso total del MST
+## - reachable: true si se pudo construir el MST completo
+static func prim_mst(graph: Graph, start_key = null) -> Dictionary:
+	var result := {
+		"edges": [],
+		"total_weight": 0.0,
+		"reachable": false
+	}
+	
+	if graph == null:
+		return result
+	
+	# Obtener la lista de vértices de forma compatible con Graph/SocialGraph
+	# Graph no implementa get_vertices(), usar get_nodes() y tomar las claves
+	var vertices: Array = []
+	if graph.has_method("get_nodes"):
+		vertices = graph.get_nodes().keys()
+	elif graph.has_method("get_vertex") and graph.has_method("get_neighbor_weights"):
+		# fallback: intentar usar la propiedad pública 'vertices' si existe
+		if typeof(graph) == TYPE_OBJECT and graph.has("vertices"):
+			vertices = (graph.vertices.keys() if graph.vertices else [])
+		else:
+			vertices = []
+	if vertices.is_empty():
+		return result
+	
+	# Si no se especifica inicio, usar el primer vértice
+	if start_key == null:
+		start_key = vertices[0]
+	
+	if not graph.has_vertex(start_key):
+		return result
+	
+	var visited: Dictionary = {}
+	var mst_edges: Array = []
+	var total_weight: float = 0.0
+	# Construir vista no dirigida del grafo a partir de get_edges()
+	# Esto permite usar SocialGraph (dirigido) y Graph (no dirigido) de forma uniforme.
+	var undirected_adj: Dictionary = _build_undirected_adjacency(graph)
+	
+	# Priority queue (min heap) - Array de diccionarios { weight, node, parent }
+	var min_heap: Array = []
+	min_heap.append({"weight": 0.0, "node": start_key, "parent": null})
+
+	while not min_heap.is_empty() and mst_edges.size() < vertices.size() - 1:
+		# Ordenar por peso ascendente y obtener la arista de menor peso
+		min_heap.sort_custom(func(a, b): return a["weight"] < b["weight"])
+		var current: Dictionary = min_heap.pop_front()
+
+		if visited.has(current["node"]):
+			continue
+
+		visited[current["node"]] = true
+
+		# Agregar arista al MST (excepto el primer nodo)
+		if current["parent"] != null:
+			mst_edges.append({
+				"from": current["parent"],
+				"to": current["node"],
+				"weight": current["weight"]
+			})
+			total_weight += current["weight"]
+
+		# Agregar todas las aristas desde el nodo actual a vecinos no visitados (uso la vista no dirigida)
+		var neighbors: Dictionary = undirected_adj.get(current["node"], {})
+		for neighbor in neighbors.keys():
+			if visited.has(neighbor):
+				continue
+			var weight: float = float(neighbors[neighbor])
+			min_heap.append({"weight": weight, "node": neighbor, "parent": current["node"]})
+	
+	result["edges"] = mst_edges
+	result["total_weight"] = total_weight
+	result["reachable"] = (mst_edges.size() == vertices.size() - 1)
+	
 	return result
 
 
