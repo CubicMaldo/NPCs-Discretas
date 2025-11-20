@@ -1,0 +1,29 @@
+[gd_scene load_steps=7 format=3 uid="uid://b5d5owvcpca7u"]
+
+[ext_resource type="Script" uid="uid://bb0t2ovl7wifo" path="res://addons/beehave/nodes/beehave_tree.gd" id="1_tree"]
+[ext_resource type="Script" uid="uid://cg016dbe7gs1x" path="res://addons/beehave/nodes/composites/sequence.gd" id="2_seq"]
+[ext_resource type="Script" uid="uid://bx1fgfowhak1x" path="res://scripts/ai/bt/leaves/find_random_point.gd" id="3_find"]
+[ext_resource type="Script" uid="uid://31ei4js4ehg7" path="res://scripts/ai/bt/leaves/move_to_target.gd" id="4_move"]
+[ext_resource type="Script" uid="uid://dorri1tul8gfx" path="res://addons/beehave/nodes/decorators/delayer.gd" id="5_delay"]
+[ext_resource type="Script" uid="uid://bmqw5ic4c50xc" path="res://scripts/ai/bt/leaves/always_succeed.gd" id="6_succeed"]
+
+[node name="IdleWanderBT" type="Node" node_paths=PackedStringArray("blackboard", "actor")]
+script = ExtResource("1_tree")
+blackboard = NodePath("@Node@32461")
+actor = NodePath("..")
+
+[node name="SequenceComposite" type="Node" parent="."]
+script = ExtResource("2_seq")
+
+[node name="FindRandomPoint" type="Node" parent="SequenceComposite"]
+script = ExtResource("3_find")
+
+[node name="MoveToTarget" type="Node" parent="SequenceComposite"]
+script = ExtResource("4_move")
+
+[node name="DelayDecorator" type="Node" parent="SequenceComposite"]
+script = ExtResource("5_delay")
+wait_time = 0.5
+
+[node name="AlwaysSucceed" type="Node" parent="SequenceComposite/DelayDecorator"]
+script = ExtResource("6_succeed")

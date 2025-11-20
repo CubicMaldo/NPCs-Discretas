@@ -1,3 +1,37 @@
-[gd_scene format=3]
+[gd_scene load_steps=5 format=3 uid="uid://dc8fq3inf45py"]
+
+[ext_resource type="Script" uid="uid://gxt75y1rbquu" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://bx5pi7mgsqpq3" path="res://scripts/systems/social_graph/SocialGraphManager.gd" id="2_sgm"]
+[ext_resource type="PackedScene" uid="uid://ccxc1q7qwg4j6" path="res://scenes/npcs/NPC.tscn" id="3_npc"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_1"]
+vertices = PackedVector2Array(620, 350, 10, 350, 10, 10, 620, 10)
+polygons = Array[PackedInt32Array]([PackedInt32Array(0, 1, 2, 3)])
+outlines = Array[PackedVector2Array]([PackedVector2Array(10, 10, 10, 350, 620, 350, 620, 10)])
 
 [node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="SocialGraphManager" type="Node" parent="."]
+script = ExtResource("2_sgm")
+
+[node name="NavigationRegion2D" type="NavigationRegion2D" parent="."]
+navigation_polygon = SubResource("NavigationPolygon_1")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(315, 180)
+
+[node name="NPC_2" parent="." instance=ExtResource("3_npc")]
+position = Vector2(500, 100)
+npc_name = "Bob"
+
+[node name="NPC_3" parent="." instance=ExtResource("3_npc")]
+position = Vector2(197, 241)
+npc_name = "Charlie"
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="DebugButton" type="Button" parent="CanvasLayer"]
+offset_right = 160.0
+offset_bottom = 40.0
+text = "Print Connections"

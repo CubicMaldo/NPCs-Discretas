@@ -1,9 +1,0 @@
-[gd_scene load_steps=3 format=3 uid="uid://dl0d47y3n4edb"]
-
-[ext_resource type="Script" uid="uid://hn6w45kst30m" path="res://example_ai/ai/action_bt.gd" id="1"]
-[ext_resource type="PackedScene" uid="uid://0qyqpmr1hamm" path="res://example_ai/ai/bt/trees/find_shelter_bt.tscn" id="2_tl73p"]
-
-[node name="ActionBTLookForShelter" type="Node"]
-script = ExtResource("1")
-bt_scene = ExtResource("2_tl73p")
-cooldown = 1.5

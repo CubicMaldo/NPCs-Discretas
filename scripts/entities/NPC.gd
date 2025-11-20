@@ -8,7 +8,7 @@ extends CharacterBody2D
 @export var base_emotion: Emotion
 
 ## Referencias a componentes
-@onready var sprite: Sprite2D = get_node_or_null("Sprite2D")
+@onready var sprite: Sprite2D = $Sprite2D
 @onready var social_component: SocialComponent
 
 ## Estado actual
@@ -47,6 +47,24 @@ func _ready() -> void:
 # Maintains a cached copy of the position for systems that poll less frequently.
 func _physics_process(_delta: float) -> void:
 	current_position = global_position
+	
+	if _is_moving:
+		if navigation_agent.is_navigation_finished():
+			_is_moving = false
+			velocity = Vector2.ZERO
+			#print("[%s] Navigation finished." % name)
+			return
+
+		var next_path_position: Vector2 = navigation_agent.get_next_path_position()
+		var current_agent_position: Vector2 = global_position
+		var new_velocity: Vector2 = (next_path_position - current_agent_position).normalized() * movement_speed
+		
+		if navigation_agent.avoidance_enabled:
+			navigation_agent.set_velocity(new_velocity)
+		else:
+			velocity = new_velocity
+			move_and_slide()
+
 
 # Handles a direct interaction with another NPC and forwards it to coordinating systems.
 func interact_with(other_npc: NPC) -> void:
@@ -86,7 +104,7 @@ func _evaluate_interaction_delta(other_npc: NPC) -> float:
 
 # Ensures the NPC always has a social component child to delegate social data access.
 func _ensure_social_component() -> SocialComponent:
-	var existing := get_node_or_null("SocialComponent")
+	var existing := $SocialComponent
 	if existing:
 		return existing as SocialComponent
 	var component := SocialComponent.new()
@@ -123,3 +141,38 @@ func get_relationship_snapshot() -> Dictionary:
 # Compatibilidad con código legacy (deprecated, usar social_component directamente).
 func get_relationship_component() -> SocialComponent:
 	return social_component
+
+# --- Movement & AI Integration ---
+
+@onready var navigation_agent: NavigationAgent2D = $NavigationAgent2D
+@onready var utility_agent: UtilityAiAgent = $UtilityAiAgent
+
+var movement_speed: float = 100.0
+var _is_moving: bool = false
+
+func is_moving() -> bool:
+	return _is_moving
+
+
+func move_to(target_position: Vector2) -> void:
+	if navigation_agent:
+		navigation_agent.target_position = target_position
+		_is_moving = true
+	else:
+		push_warning("NPC: No NavigationAgent2D found. Cannot move.")
+
+func stop_moving() -> void:
+	_is_moving = false
+	velocity = Vector2.ZERO
+	if navigation_agent:
+		navigation_agent.target_position = global_position
+
+func has_reached_destination() -> bool:
+	if not navigation_agent:
+		return true
+	return navigation_agent.is_navigation_finished()
+
+func setup_ai() -> void:
+	# Initialize UtilityAI or Beehave if needed dynamically
+	if utility_agent:
+		utility_agent.set_active(true)

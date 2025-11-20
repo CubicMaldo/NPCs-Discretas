@@ -38,6 +38,10 @@ func register_interaction(a, b, base_delta := 0.0, options: Dictionary = {}) -> 
 func add_connection(a, b, affinity: float, edge_metadata: Resource = null) -> void:
 	social_graph.connect_npcs(a, b, affinity, edge_metadata)
 
+## Comprueba si existe una conexión dirigida de A hacia B.
+func has_connection(a, b) -> bool:
+	return social_graph.get_edge_resource(a, b) != null
+
 
 ## Conecta dos NPCs/ids con una relación bidireccional (ambos se conocen mutuamente).
 ## [br]

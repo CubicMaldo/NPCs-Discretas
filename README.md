@@ -133,19 +133,19 @@ manager.add_connection_mutual(npc_a, npc_b, 75.0, 60.0)
 ```gdscript
 # Check if A knows B (directed)
 if social_graph.has_edge("Alice", "Bob"):
-    var familiarity = social_graph.get_edge("Alice", "Bob")
-    print("Alice's familiarity with Bob: ", familiarity)
+	var familiarity = social_graph.get_edge("Alice", "Bob")
+	print("Alice's familiarity with Bob: ", familiarity)
 
 # Get all out-neighbors (who Alice knows)
 var neighbors = social_graph.get_cached_neighbors("Alice")
 for neighbor_key in neighbors:
-    print("Alice knows: ", neighbor_key, " (", neighbors[neighbor_key], ")")
+	print("Alice knows: ", neighbor_key, " (", neighbors[neighbor_key], ")")
 
 # Find shortest directed path
 var path = social_graph.get_shortest_path("Alice", "Eve")
 if path.reachable:
-    print("Path: ", path.path)  # ["Alice", "Bob", "Carol", "Eve"]
-    print("Distance: ", path.distance)
+	print("Path: ", path.path)  # ["Alice", "Bob", "Carol", "Eve"]
+	print("Distance: ", path.distance)
 ```
 
 ### Interaction System
@@ -159,9 +159,9 @@ npc_alice.interact_with(npc_bob)
 
 # Manual interaction registration with custom options
 manager.register_interaction(npc_a, npc_b, 5.0, {
-    "min_weight": 0.0,
-    "max_weight": 100.0,
-    "smoothing": 0.3  # Gradual changes
+	"min_weight": 0.0,
+	"max_weight": 100.0,
+	"smoothing": 0.3  # Gradual changes
 })
 ```
 
