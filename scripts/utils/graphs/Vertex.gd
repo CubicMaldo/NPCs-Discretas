@@ -1,5 +1,5 @@
-## Representa un vértice en el grafo.
-## Extiende `RefCounted` para permitir gestión de memoria explícita.
+## Representa un vertice en el grafo
+## Extiende `RefCounted` para permitir gestion de memoria explicita
 class_name Vertex
 extends RefCounted
 

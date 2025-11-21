@@ -21,7 +21,7 @@ const DUNBAR_LIMIT := 150
 var decay_rate_per_second: float = 0.0
 
 ## Serializador para guardado/cargado de datos.
-var _serializer : SocialGraphSerializer
+var _serializer: SocialGraphSerializer
 
 ## Registro de NPCs activos mediante WeakRef: npc_id -> WeakRef(NPC).
 var _npc_registry: Dictionary = {}
@@ -166,7 +166,6 @@ func _remove_vertex_for_key(key) -> bool:
 	return true
 
 
-
 ## Devuelve una clave normalizada a usar en el grafo, favoreciendo objetos `NPC`.
 ## - Si recibe un `NPC`, se usa directamente el objeto como clave.
 ## - Si recibe otro `Object`, también se conserva.
@@ -203,7 +202,7 @@ func _to_id(entity_or_key):
 ## A diferencia de la clase base Graph que crea conexiones bidireccionales,
 ## esta versión solo crea la arista A→B sin crear B→A automáticamente.
 ## Internamente, convierte "familiarity" a "weight" para compatibilidad.
-func add_connection(a, b, familiarity: float, edge_metadata: Resource = null) -> void:
+func add_connection(a, b, familiarity: float, edge_metadata: Resource = null, _initial_flux: int = 0, _directed: bool = false) -> void:
 	if a == b:
 		push_error("SocialGraph.add_connection: cannot connect node to itself")
 		return
@@ -233,7 +232,7 @@ func add_connection(a, b, familiarity: float, edge_metadata: Resource = null) ->
 		# Crear nueva arista unidireccional
 		edge = Edge.new(va, vb, familiarity)
 		edge.metadata = meta
-		va.edges[b] = edge  # Solo agregar en dirección A→B
+		va.edges[b] = edge # Solo agregar en dirección A→B
 		# NO agregar vb.edges[a] para mantener el grafo dirigido
 		emit_signal("edge_added", a, b)
 	else:

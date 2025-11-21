@@ -1,18 +1,21 @@
 @startuml
 skinparam classAttributeIconSize 0
 hide empty members
-skinparam linetype ortho
-skinparam nodesep 60
-skinparam ranksep 80
+skinparam linetype polyline
+skinparam nodesep 50
+skinparam ranksep 100
+scale max 1920 width
 
 ' Colores por categoría
 skinparam class {
   BackgroundColor<<Godot>> #EEEEEE
+  BackgroundColor<<Beehave>> #E1BEE7
   BackgroundColor<<Core>> #E3F2FD
   BackgroundColor<<Systems>> #FFF3E0
   BackgroundColor<<AI>> #F3E5F5
   BackgroundColor<<Utils>> #E8F5E9
   BackgroundColor<<Tools>> #FFF9C4
+  BackgroundColor<<UI>> #FFEBEE
 }
 
 ' ==========================================
@@ -20,13 +23,47 @@ skinparam class {
 ' ==========================================
 abstract class RefCounted <<Godot>>
 abstract class Node <<Godot>>
+abstract class Node2D <<Godot>>
 abstract class Control <<Godot>>
 abstract class CharacterBody2D <<Godot>>
 abstract class Resource <<Godot>>
+abstract class Camera2D <<Godot>>
 
+Node2D --|> Node
 Control --|> Node
-CharacterBody2D --|> Node
+CharacterBody2D --|> Node2D
+Camera2D --|> Node2D
 Resource --|> RefCounted
+
+' ==========================================
+' BEEHAVE ADDON (Third-party)
+' ==========================================
+together {
+package "beehave" <<Beehave>> {
+  abstract class BeehaveTree <<Node>> {
+    +actor: Node
+    +blackboard: Blackboard
+    +enabled: bool
+    +status: int
+  }
+  
+  abstract class ActionLeaf <<Node>> {
+    +tick(actor: Node, blackboard: Blackboard): int
+    +FAILURE: int
+    +SUCCESS: int
+    +RUNNING: int
+  }
+  
+  class Blackboard <<Node>> {
+    +set_value(key: String, value: Variant)
+    +get_value(key: String, default: Variant): Variant
+  }
+  
+  BeehaveTree --|> Node
+  ActionLeaf --|> Node
+  Blackboard --|> Node
+  BeehaveTree --> Blackboard
+}
 
 ' ==========================================
 ' ENTIDADES CORE
@@ -39,6 +76,7 @@ package "entities" <<Core>> {
   
   class Personality <<Resource>> {
     +traits: Dictionary
+    +is_extrovert: bool
   }
   
   class Relationship <<Resource>> {
@@ -68,8 +106,10 @@ package "entities" <<Core>> {
     +personality: Personality
     +base_emotion: Emotion
     +social_graph_manager: SocialGraphManager
+    +navigation_agent: NavigationAgent2D
     +sprite: Sprite2D
     +social_component: SocialComponent
+    +relationship_component: RelationshipComponent
     +current_state: String
     +current_emotion: Emotion
     +current_position: Vector2
@@ -81,6 +121,9 @@ package "entities" <<Core>> {
     +get_familiarity(partner): float
     +get_top_relationships(top_n: int): Array
     +get_friends_above(threshold: float): Array
+    +move_to(target_pos: Vector2)
+    +stop_moving()
+    +is_moving(): bool
   }
   
   class SocialComponent <<Node>> {
@@ -119,6 +162,47 @@ package "entities" <<Core>> {
   NPC --> Personality
   NPC --> Emotion
   RelationshipComponent --> Relationship
+}
+}
+
+' ==========================================
+' CORE SYSTEMS
+' ==========================================
+together {
+package "core" <<Core>> {
+  class Main <<Node2D>> {
+    +social_graph_manager: SocialGraphManager
+    +camera: Camera2D
+    +_ready()
+    +_setup_npc(npc: NPC)
+    +_on_debug_button_pressed()
+  }
+  
+  class EventSystem <<Node>> {
+  }
+  
+  class GameManager <<Node>> {
+  }
+  
+  Main --|> Node2D
+  EventSystem --|> Node
+  GameManager --|> Node
+  Main --> SocialGraphManager
+}
+
+' ==========================================
+' UI COMPONENTS
+' ==========================================
+package "ui" <<UI>> {
+  class GraphVisualizer <<Control>> {
+  }
+  
+  class HUDController <<Control>> {
+  }
+  
+  GraphVisualizer --|> Control
+  HUDController --|> Control
+}
 }
 
 ' ==========================================
@@ -204,6 +288,9 @@ package "social_graph" <<Systems>> {
     +add_connection(a, b, affinity: float, edge_metadata: Resource)
     +add_connection_mutual(a, b, affinity_a_to_b: float, affinity_b_to_a: float)
     +set_familiarity(a, b, familiarity: float)
+    +get_familiarity(a, b): float
+    +get_cached_neighbors(npc): Array
+    +has_connection(a, b): bool
     +simulate_rumor(seed_actor, steps: int, attenuation: float, min_strength: float, use_ids: bool): Dictionary
     +apply_decay(delta_seconds: float): Dictionary
     +serialize_graph(): Dictionary
@@ -273,6 +360,7 @@ package "social_graph" <<Systems>> {
 ' ==========================================
 ' IA UTILIDAD
 ' ==========================================
+together {
 package "utility_ai" <<AI>> {
   class UtilityAi <<Node>>
   UtilityAi --|> Node
@@ -283,19 +371,24 @@ package "utility_ai" <<AI>> {
   }
   
   class UtilityAiAction <<UtilityAi>> {
+    +status: int
+    +_agent: UtilityAiAgent
     +calculate_score()
-    +start()
-    +tick()
+    +start(agent: UtilityAiAgent)
+    +tick(delta: float): int
+    +stop()
+    +complete()
+    +fail()
   }
   
   class UtilityAiConsideration <<UtilityAi>> {
     +curve: Curve
-    +score()
+    +score(): float
   }
   
   class UtilityAiBlackboard <<Node>> {
-    +set_value()
-    +get_value()
+    +set_value(key: String, value: Variant)
+    +get_value(key: String, default: Variant): Variant
   }
   
   UtilityAiAgent --|> UtilityAi
@@ -304,6 +397,80 @@ package "utility_ai" <<AI>> {
   UtilityAiBlackboard --|> Node
   UtilityAiAgent o-- UtilityAiAction
   UtilityAiAction --> UtilityAiConsideration
+}
+
+' ==========================================
+' AI - ACTIONS & CONSIDERATIONS
+' ==========================================
+package "ai_actions" <<AI>> {
+  class ActionBTWrapper <<UtilityAiAction>> {
+    +bt_scene: PackedScene
+    +_bt_instance: Node
+    +start(agent: UtilityAiAgent)
+    +tick(delta: float): int
+    +stop()
+  }
+  
+  class SocialDesireConsideration <<UtilityAiConsideration>> {
+    +_npc: NPC
+    +score(): float
+  }
+  
+  class FixedScore <<UtilityAiConsideration>> {
+    +score(): float
+  }
+  
+  ActionBTWrapper --|> UtilityAiAction
+  SocialDesireConsideration --|> UtilityAiConsideration
+  FixedScore --|> UtilityAiConsideration
+  ActionBTWrapper --> BeehaveTree
+  SocialDesireConsideration --> NPC
+}
+}
+
+' ==========================================
+' AI - BEHAVIOR TREE LEAVES
+' ==========================================
+package "bt_leaves" <<AI>> {
+  class FindBestTarget <<ActionLeaf>> {
+    +tick(actor: Node, blackboard: Blackboard): int
+  }
+  
+  class MoveToTarget <<ActionLeaf>> {
+    +tick(actor: Node, blackboard: Blackboard): int
+  }
+  
+  class PerformInteraction <<ActionLeaf>> {
+    +tick(actor: Node, blackboard: Blackboard): int
+  }
+  
+  class FindRandomPoint <<ActionLeaf>> {
+    +tick(actor: Node, blackboard: Blackboard): int
+  }
+  
+  class WaitSeconds <<ActionLeaf>> {
+    +duration: float
+    +_timer: float
+    +tick(actor: Node, blackboard: Blackboard): int
+  }
+  
+  class AlwaysSucceed <<ActionLeaf>> {
+    +tick(actor: Node, blackboard: Blackboard): int
+  }
+  
+  FindBestTarget --|> ActionLeaf
+  MoveToTarget --|> ActionLeaf
+  PerformInteraction --|> ActionLeaf
+  FindRandomPoint --|> ActionLeaf
+  WaitSeconds --|> ActionLeaf
+  AlwaysSucceed --|> ActionLeaf
+  
+  FindBestTarget --> NPC
+  FindBestTarget --> SocialGraphManager
+  MoveToTarget --> NPC
+  PerformInteraction --> NPC
+  FindRandomPoint --> NPC
+  WaitSeconds --> NPC
 }
 
 ' ==========================================
@@ -328,6 +495,7 @@ package "tools" <<Tools>> {
 ' RELACIONES PRINCIPALES
 ' ==========================================
 NPC --> SocialGraphManager
+NPC --> UtilityAiAgent
 SocialComponent --> SocialGraphManager
 RelationshipComponent --> SocialGraphManager
 SocialGraph --> NPC
