@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://wbstf5lydlvr"
+path="res://.godot/imported/MiniNobleWoman.aseprite-ca88395afee6002abdff7933fa20a139.res"
+
+[deps]
+
+source_file="res://sprites/npcs/MiniNobleWoman.aseprite"
+dest_files=["res://.godot/imported/MiniNobleWoman.aseprite-ca88395afee6002abdff7933fa20a139.res"]
+
+[params]
+

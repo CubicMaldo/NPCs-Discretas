@@ -26,6 +26,16 @@ point_count = 3
 collision_layer = 2
 script = ExtResource("1_npc")
 
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -15)
+shape = SubResource("CapsuleShape2D_body")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+visible = false
+position = Vector2(-8, -20)
+scale = Vector2(16, 20)
+texture = SubResource("ImageTexture_3egug")
+
 [node name="InteractionZone" type="Area2D" parent="."]
 position = Vector2(0, -11)
 collision_layer = 0

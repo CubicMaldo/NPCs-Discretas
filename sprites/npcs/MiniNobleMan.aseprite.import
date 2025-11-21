@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://lnvn1rqigawe"
+path="res://.godot/imported/MiniNobleMan.aseprite-db8a41b7433bb6ebf6b01f2dab1041f1.res"
+
+[deps]
+
+source_file="res://sprites/npcs/MiniNobleMan.aseprite"
+dest_files=["res://.godot/imported/MiniNobleMan.aseprite-db8a41b7433bb6ebf6b01f2dab1041f1.res"]
+
+[params]
+

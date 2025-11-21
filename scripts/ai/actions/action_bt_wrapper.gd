@@ -62,9 +62,9 @@ func tick(_delta: float) -> Status:
 	return Status.RUNNING
 
 func stop() -> void:
-	var actor_name = "Unknown"
+	var _actor_name = "Unknown"
 	if _agent and _agent.get_parent():
-		actor_name = _agent.get_parent().name
+		_actor_name = _agent.get_parent().name
 	if _bt_instance != null:
 		if _bt_instance.has_method("stop"):
 			_bt_instance.call("stop")

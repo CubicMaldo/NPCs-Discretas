@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://cepw1jjf81h1j"
+path="res://.godot/imported/MiniPeasant.aseprite-9c833a438f42ea055e564ab32677f1c4.res"
+
+[deps]
+
+source_file="res://sprites/npcs/MiniPeasant.aseprite"
+dest_files=["res://.godot/imported/MiniPeasant.aseprite-9c833a438f42ea055e564ab32677f1c4.res"]
+
+[params]
+
