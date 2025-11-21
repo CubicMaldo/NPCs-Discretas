@@ -9,6 +9,7 @@ extends CharacterBody2D
 
 ## Referencias a componentes
 @onready var sprite: Sprite2D = $Sprite2D
+@onready var utility_label: Label = $UtilityLabel
 @onready var social_component: SocialComponent
 
 ## Estado actual
@@ -44,6 +45,9 @@ func _ready() -> void:
 	social_component.owner_id = npc_id
 	if social_graph_manager:
 		social_component.set_graph_manager(social_graph_manager)
+	
+	setup_ai()
+
 
 # Maintains a cached copy of the position for systems that poll less frequently.
 func _physics_process(_delta: float) -> void:
@@ -215,4 +219,12 @@ func has_reached_destination() -> bool:
 func setup_ai() -> void:
 	# Initialize UtilityAI or Beehave if needed dynamically
 	if utility_agent:
-		utility_agent.set_active(true)
+		utility_agent.enabled = true
+
+		if not utility_agent.top_score_action_changed.is_connected(_on_utility_action_changed):
+			utility_agent.top_score_action_changed.connect(_on_utility_action_changed)
+
+func _on_utility_action_changed(action_id: String) -> void:
+	# print("NPC %s: Action changed to %s" % [name, action_id])
+	if utility_label:
+		utility_label.text = action_id

@@ -1,9 +1,18 @@
-[gd_scene load_steps=5 format=3 uid="uid://btf75ti5xii4"]
+[gd_scene load_steps=6 format=3 uid="uid://btf75ti5xii4"]
 
 [ext_resource type="Script" uid="uid://cj782xsilhca1" path="res://scripts/ui/SocialGraphPanel.gd" id="1_panel"]
 [ext_resource type="Script" uid="uid://f3rodujd6g18" path="res://scripts/utils/graphs/visuals/GraphDisplay.gd" id="2_display"]
-[ext_resource type="PackedScene" path="res://scenes/ui/GraphNodeView.tscn" id="3_node_view"]
-[ext_resource type="PackedScene" path="res://scenes/ui/GraphEdgeView.tscn" id="4_edge_view"]
+[ext_resource type="PackedScene" uid="uid://cvutvlq3tomm5" path="res://scenes/ui/GraphNodeView.tscn" id="3_node_view"]
+[ext_resource type="PackedScene" uid="uid://cvutvcf6tomm5" path="res://scenes/ui/GraphEdgeView.tscn" id="4_edge_view"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.117647, 0.117647, 0.180392, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_bottom = 2
+border_color = Color(0.2, 0.2, 0.3, 1)
+corner_radius_top_left = 16
+corner_radius_bottom_left = 16
 
 [node name="SocialGraphPanel" type="Control"]
 layout_mode = 3
@@ -21,31 +30,48 @@ anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -400.0
 grow_horizontal = 0
 grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
 
-[node name="SubViewportContainer" type="SubViewportContainer" parent="Panel"]
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Social Network"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
 stretch = true
 
-[node name="SubViewport" type="SubViewport" parent="Panel/SubViewportContainer"]
+[node name="SubViewport" type="SubViewport" parent="Panel/VBoxContainer/SubViewportContainer"]
 handle_input_locally = false
-size = Vector2i(400, 360)
+size = Vector2i(174, 274)
 render_target_update_mode = 4
 
-[node name="Camera2D" type="Camera2D" parent="Panel/SubViewportContainer/SubViewport"]
+[node name="Camera2D" type="Camera2D" parent="Panel/VBoxContainer/SubViewportContainer/SubViewport"]
 
-[node name="GraphDisplay" type="Node2D" parent="Panel/SubViewportContainer/SubViewport"]
+[node name="GraphDisplay" type="Node2D" parent="Panel/VBoxContainer/SubViewportContainer/SubViewport"]
 script = ExtResource("2_display")
 node_scene = ExtResource("3_node_view")
 edge_scene = ExtResource("4_edge_view")
-layout_type = "force_directed"
+layout_type = "circular"
 edge_label_mode = "weight"
 
 [node name="ToggleButton" type="Button" parent="."]

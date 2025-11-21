@@ -10,6 +10,7 @@ signal interaction_registered_ids(a_id, b_id, new_familiarity)
 
 func _ready() -> void:
 	social_graph = SocialGraph.new()
+	add_to_group("social_graph_manager")
 	social_graph.interaction_registered.connect(_on_interaction_registered)
 	social_graph.interaction_registered_ids.connect(_on_interaction_registered_ids)
 

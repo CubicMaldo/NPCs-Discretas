@@ -9,8 +9,8 @@
 [ext_resource type="Script" uid="uid://blk31okmdul67" path="res://scripts/ai/considerations/fixed_score.gd" id="7_fixed_score"]
 [ext_resource type="Script" uid="uid://tcdsvlp4574a" path="res://scripts/entities/PersonalityComponent.gd" id="8_bycv4"]
 [ext_resource type="Script" uid="uid://dp81q3571l76p" path="res://scripts/entities/SocialComponent.gd" id="10_social_comp"]
-[ext_resource type="PackedScene" path="res://scripts/ai/bt/trees/talk_bt.tscn" id="11_talk_bt"]
-[ext_resource type="PackedScene" path="res://scripts/ai/bt/trees/fight_bt.tscn" id="12_fight_bt"]
+[ext_resource type="PackedScene" uid="uid://talkbt12345" path="res://scripts/ai/bt/trees/talk_bt.tscn" id="11_talk_bt"]
+[ext_resource type="PackedScene" uid="uid://fightbt12345" path="res://scripts/ai/bt/trees/fight_bt.tscn" id="12_fight_bt"]
 [ext_resource type="Script" uid="uid://daoensap1vf3b" path="res://scripts/ai/considerations/aggression_consideration.gd" id="13_aggression_cons"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_body"]
@@ -46,6 +46,18 @@ visible = false
 position = Vector2(-8, -20)
 scale = Vector2(16, 20)
 texture = SubResource("ImageTexture_3egug")
+
+[node name="UtilityLabel" type="Label" parent="."]
+offset_left = -60.0
+offset_top = -65.0
+offset_right = 60.0
+offset_bottom = -42.0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "State"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="InteractionZone" type="Area2D" parent="."]
 position = Vector2(0, -11)
