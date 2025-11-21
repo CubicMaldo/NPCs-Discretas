@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://fqxd2g8cd8j3"
+path="res://.godot/imported/MiniQueen.aseprite-40e014b668118897844653e40c3ed7ad.res"
+
+[deps]
+
+source_file="res://sprites/npcs/MiniQueen.aseprite"
+dest_files=["res://.godot/imported/MiniQueen.aseprite-40e014b668118897844653e40c3ed7ad.res"]
+
+[params]
+

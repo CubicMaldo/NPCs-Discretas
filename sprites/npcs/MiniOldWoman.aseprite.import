@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://b1qwkjxdg0got"
+path="res://.godot/imported/MiniOldWoman.aseprite-31eaf75da65ae258c7a5fe94ecf16bf7.res"
+
+[deps]
+
+source_file="res://sprites/npcs/MiniOldWoman.aseprite"
+dest_files=["res://.godot/imported/MiniOldWoman.aseprite-31eaf75da65ae258c7a5fe94ecf16bf7.res"]
+
+[params]
+

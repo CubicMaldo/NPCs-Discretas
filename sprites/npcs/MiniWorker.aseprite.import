@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://bj51grlybgmf1"
+path="res://.godot/imported/MiniWorker.aseprite-2256b8d43035019a50f84c6db78388f7.res"
+
+[deps]
+
+source_file="res://sprites/npcs/MiniWorker.aseprite"
+dest_files=["res://.godot/imported/MiniWorker.aseprite-2256b8d43035019a50f84c6db78388f7.res"]
+
+[params]
+

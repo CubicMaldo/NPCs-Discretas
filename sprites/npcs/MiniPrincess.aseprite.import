@@ -1,0 +1,14 @@
+[remap]
+
+importer="aseprite_wizard.plugin.noop"
+type="PackedDataContainer"
+uid="uid://tt133waol5sk"
+path="res://.godot/imported/MiniPrincess.aseprite-324a93eab6aea8dda541f657b1d3bf39.res"
+
+[deps]
+
+source_file="res://sprites/npcs/MiniPrincess.aseprite"
+dest_files=["res://.godot/imported/MiniPrincess.aseprite-324a93eab6aea8dda541f657b1d3bf39.res"]
+
+[params]
+
