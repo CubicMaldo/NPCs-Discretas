@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://ccxc1q7qwg4j6"]
+[gd_scene load_steps=20 format=3 uid="uid://ccxc1q7qwg4j6"]
 
 [ext_resource type="Script" uid="uid://dld20h80s6t7l" path="res://scripts/entities/NPC.gd" id="1_npc"]
 [ext_resource type="Script" uid="uid://l6yo2itr4lnf" path="res://addons/utility_ai/agent/agent.gd" id="2_utility_agent"]
@@ -7,24 +7,35 @@
 [ext_resource type="Script" uid="uid://jlwpenqxgq3l" path="res://scripts/ai/considerations/social_desire.gd" id="5_social_desire"]
 [ext_resource type="PackedScene" uid="uid://b5d5owvcpca7u" path="res://scripts/ai/bt/trees/idle_wander_bt.tscn" id="6_idle_bt"]
 [ext_resource type="Script" uid="uid://blk31okmdul67" path="res://scripts/ai/considerations/fixed_score.gd" id="7_fixed_score"]
+[ext_resource type="Script" uid="uid://tcdsvlp4574a" path="res://scripts/entities/PersonalityComponent.gd" id="8_bycv4"]
 [ext_resource type="Script" uid="uid://dp81q3571l76p" path="res://scripts/entities/SocialComponent.gd" id="10_social_comp"]
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_interaction"]
-radius = 73.0
+[ext_resource type="PackedScene" path="res://scripts/ai/bt/trees/talk_bt.tscn" id="11_talk_bt"]
+[ext_resource type="PackedScene" path="res://scripts/ai/bt/trees/fight_bt.tscn" id="12_fight_bt"]
+[ext_resource type="Script" uid="uid://daoensap1vf3b" path="res://scripts/ai/considerations/aggression_consideration.gd" id="13_aggression_cons"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_body"]
 
 [sub_resource type="ImageTexture" id="ImageTexture_3egug"]
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_interaction"]
+radius = 200.0
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_qvc14"]
+
 [sub_resource type="Curve" id="Curve_cmg02"]
-_data = [Vector2(0, 0.9405035), 0.0, 0.0, 0, 0, Vector2(0.66386557, 0.025743723), 0.0, 0.0, 0, 0, Vector2(0.9187675, 0.48684216), 0.0, 0.0, 0, 0]
+_data = [Vector2(0, 0.3071429), 0.0, 0.0, 0, 0, Vector2(0.66386557, 0.025743723), 0.0, 0.0, 0, 0, Vector2(0.8795518, 0.3071429), 0.0, 0.0, 0, 0]
 point_count = 3
 
 [sub_resource type="Curve" id="Curve_t7167"]
 
-[node name="NPC" type="CharacterBody2D" groups=["npc"]]
+[sub_resource type="Curve" id="Curve_qvc14"]
+_data = [Vector2(0.7647059, 0), 0.0, 0.0, 0, 0, Vector2(0.96358544, 0.6428572), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[node name="NPC" type="CharacterBody2D" node_paths=PackedStringArray("personality_component") groups=["npc"]]
 collision_layer = 2
 script = ExtResource("1_npc")
+personality_component = NodePath("PersonalityComponent")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -15)
@@ -47,14 +58,14 @@ position = Vector2(0, -3)
 shape = SubResource("CircleShape2D_interaction")
 debug_color = Color(0.7, 0.5, 0, 0.42)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D2" type="CollisionShape2D" parent="."]
 position = Vector2(0, -15)
 shape = SubResource("CapsuleShape2D_body")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-position = Vector2(-8, -20)
+[node name="Sprite2D2" type="Sprite2D" parent="."]
+position = Vector2(0, -10)
 scale = Vector2(16, 20)
-texture = SubResource("ImageTexture_3egug")
+texture = SubResource("PlaceholderTexture2D_qvc14")
 
 [node name="UtilityAiAgent" type="Node" parent="."]
 script = ExtResource("2_utility_agent")
@@ -76,6 +87,27 @@ bt_scene = ExtResource("6_idle_bt")
 [node name="FixedScore" type="Node" parent="UtilityAiAgent/ActionIdleWander"]
 script = ExtResource("7_fixed_score")
 curve = SubResource("Curve_t7167")
+
+[node name="ActionTalk" type="Node" parent="UtilityAiAgent"]
+script = ExtResource("3_action_wrapper")
+bt_scene = ExtResource("11_talk_bt")
+cooldown = 3.0
+
+[node name="SocialDesire" type="Node" parent="UtilityAiAgent/ActionTalk"]
+script = ExtResource("5_social_desire")
+curve = SubResource("Curve_cmg02")
+
+[node name="ActionFight" type="Node" parent="UtilityAiAgent"]
+script = ExtResource("3_action_wrapper")
+bt_scene = ExtResource("12_fight_bt")
+cooldown = 10.0
+
+[node name="AggressionConsideration" type="Node" parent="UtilityAiAgent/ActionFight"]
+script = ExtResource("13_aggression_cons")
+curve = SubResource("Curve_qvc14")
+
+[node name="PersonalityComponent" type="Node" parent="."]
+script = ExtResource("8_bycv4")
 
 [node name="SocialComponent" type="Node" parent="."]
 script = ExtResource("10_social_comp")

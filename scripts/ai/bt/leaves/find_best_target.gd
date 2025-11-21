@@ -21,7 +21,9 @@ func tick(actor: Node, blackboard: Blackboard) -> int:
 	# Discovery Logic: Check InteractionZone for new NPCs
 	var interaction_zone = npc.get_node_or_null("InteractionZone")
 	if interaction_zone:
-		for body in interaction_zone.get_overlapping_bodies():
+		var bodies = interaction_zone.get_overlapping_bodies()
+		# print("[%s] InteractionZone bodies: %d" % [npc.name, bodies.size()])
+		for body in bodies:
 			if body is NPC and body != npc:
 				# If not in graph (or not neighbors), add connection/relationship
 				if not social_manager.has_connection(npc, body):
@@ -32,7 +34,7 @@ func tick(actor: Node, blackboard: Blackboard) -> int:
 					neighbors = social_manager.get_cached_neighbors(npc)
 
 	if neighbors.is_empty():
-		print("[%s] FindBestTarget: No neighbors found (Graph empty & no one in InteractionZone)." % npc.name)
+		# print("[%s] FindBestTarget: No neighbors found (Graph empty & no one in InteractionZone)." % npc.name)
 		return FAILURE
 
 

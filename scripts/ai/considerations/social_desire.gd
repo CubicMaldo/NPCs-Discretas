@@ -25,10 +25,11 @@ func score() -> float:
 	# (Placeholder for actual memory system)
 	
 	# Increase based on personality
-	if _npc.personality and _npc.personality.is_extrovert:
+	# Increase based on personality
+	if _npc.personality_component and _npc.personality_component.extraversion > 0.6:
 		final_score += 0.2
 		
 	# Decrease if currently moving to a high priority target?
 	
-	print("[%s] SocialDesire Score: %s" % [_npc.name, final_score])
+	#print("[%s] SocialDesire Score: %s" % [_npc.name, final_score])
 	return clamp(final_score, 0.0, 1.0)

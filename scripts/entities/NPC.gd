@@ -4,7 +4,7 @@ extends CharacterBody2D
 ## Datos de identidad y configuración
 @export var npc_id: int = -1
 @export var npc_name: String = ""
-@export var personality: Personality
+@export var personality_component: PersonalityComponent
 @export var base_emotion: Emotion
 
 ## Referencias a componentes
@@ -40,6 +40,7 @@ func _ready() -> void:
 	current_position = global_position
 	current_emotion = _instantiate_emotion()
 	social_component = _ensure_social_component()
+	personality_component = _ensure_personality_component()
 	social_component.owner_id = npc_id
 	if social_graph_manager:
 		social_component.set_graph_manager(social_graph_manager)
@@ -73,6 +74,36 @@ func interact_with(other_npc: NPC) -> void:
 	
 	var familiarity_delta := _evaluate_interaction_delta(other_npc)
 	social_component.update_familiarity(other_npc, familiarity_delta)
+
+func talk_to(other_npc: NPC) -> void:
+	if not other_npc: return
+	
+	# Simple talk logic: boost familiarity slightly based on compatibility
+	var compatibility = 0.5
+	if personality_component and other_npc.personality_component:
+		compatibility = personality_component.calculate_compatibility(other_npc.personality_component)
+	
+	var delta = 0.1 * compatibility
+	# Random chance for bad interaction
+	if randf() < 0.1:
+		delta = -0.1
+		print("[%s] Talked to %s (Bad outcome)" % [name, other_npc.name])
+	else:
+		print("[%s] Talked to %s (Good outcome)" % [name, other_npc.name])
+		
+	social_component.update_familiarity(other_npc, delta)
+	if social_graph_manager and social_graph_manager.has_method("register_interaction"):
+		social_graph_manager.register_interaction(self, other_npc)
+
+func fight_with(other_npc: NPC) -> void:
+	if not other_npc: return
+	
+	print("[%s] Fighting with %s!" % [name, other_npc.name])
+	# Fighting drastically reduces familiarity
+	social_component.update_familiarity(other_npc, -0.5)
+	
+	if social_graph_manager and social_graph_manager.has_method("register_interaction"):
+		social_graph_manager.register_interaction(self, other_npc)
 
 # Requests an external decision system (provided by an addon) to determine the next action.
 func choose_action() -> String:
@@ -109,6 +140,15 @@ func _ensure_social_component() -> SocialComponent:
 		return existing as SocialComponent
 	var component := SocialComponent.new()
 	component.name = "SocialComponent"
+	add_child(component)
+	return component
+
+func _ensure_personality_component() -> PersonalityComponent:
+	var existing := $PersonalityComponent
+	if existing:
+		return existing as PersonalityComponent
+	var component := PersonalityComponent.new()
+	component.name = "PersonalityComponent"
 	add_child(component)
 	return component
 

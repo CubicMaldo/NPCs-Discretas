@@ -1,0 +1,63 @@
+[gd_scene load_steps=5 format=3 uid="uid://btf75ti5xii4"]
+
+[ext_resource type="Script" uid="uid://cj782xsilhca1" path="res://scripts/ui/SocialGraphPanel.gd" id="1_panel"]
+[ext_resource type="Script" uid="uid://f3rodujd6g18" path="res://scripts/utils/graphs/visuals/GraphDisplay.gd" id="2_display"]
+[ext_resource type="PackedScene" path="res://scenes/ui/GraphNodeView.tscn" id="3_node_view"]
+[ext_resource type="PackedScene" path="res://scenes/ui/GraphEdgeView.tscn" id="4_edge_view"]
+
+[node name="SocialGraphPanel" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_panel")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -400.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="Panel/SubViewportContainer"]
+handle_input_locally = false
+size = Vector2i(400, 360)
+render_target_update_mode = 4
+
+[node name="Camera2D" type="Camera2D" parent="Panel/SubViewportContainer/SubViewport"]
+
+[node name="GraphDisplay" type="Node2D" parent="Panel/SubViewportContainer/SubViewport"]
+script = ExtResource("2_display")
+node_scene = ExtResource("3_node_view")
+edge_scene = ExtResource("4_edge_view")
+layout_type = "force_directed"
+edge_label_mode = "weight"
+
+[node name="ToggleButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -120.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 51.0
+grow_horizontal = 0
+text = "Show Graph"
+
+[connection signal="pressed" from="ToggleButton" to="." method="toggle_visibility"]

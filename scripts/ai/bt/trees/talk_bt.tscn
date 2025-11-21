@@ -1,0 +1,24 @@
+[gd_scene load_steps=7 format=3 uid="uid://talkbt12345"]
+
+[ext_resource type="Script" uid="uid://bb0t2ovl7wifo" path="res://addons/beehave/nodes/beehave_tree.gd" id="1_tree"]
+[ext_resource type="Script" uid="uid://cg016dbe7gs1x" path="res://addons/beehave/nodes/composites/sequence.gd" id="2_seq"]
+[ext_resource type="Script" uid="uid://bx1fgfowhak1x" path="res://scripts/ai/bt/leaves/find_best_target.gd" id="3_find"]
+[ext_resource type="Script" uid="uid://31ei4js4ehg7" path="res://scripts/ai/bt/leaves/move_to_target.gd" id="4_move"]
+[ext_resource type="Script" path="res://scripts/ai/bt/leaves/perform_talk.gd" id="5_talk"]
+
+[node name="TalkBT" type="Node" node_paths=PackedStringArray("blackboard", "actor")]
+script = ExtResource("1_tree")
+blackboard = NodePath("@Node@32461")
+actor = NodePath("..")
+
+[node name="SequenceComposite" type="Node" parent="."]
+script = ExtResource("2_seq")
+
+[node name="FindBestTarget" type="Node" parent="SequenceComposite"]
+script = ExtResource("3_find")
+
+[node name="MoveToTarget" type="Node" parent="SequenceComposite"]
+script = ExtResource("4_move")
+
+[node name="PerformTalk" type="Node" parent="SequenceComposite"]
+script = ExtResource("5_talk")
