@@ -20,6 +20,9 @@ config/icon="res://icon.svg"
 SignalLens="*res://addons/signal_lens/autoload/signal_lens_autoload.gd"
 BeehaveGlobalMetrics="*res://addons/beehave/metrics/beehave_global_metrics.gd"
 BeehaveGlobalDebugger="*res://addons/beehave/debug/global_debugger.gd"
+GameManager="*res://scripts/core/GameManager.gd"
+EventSystem="*res://scripts/core/EventSystem.gd"
+AudioManager="*res://scripts/systems/audio/AudioManager.gd"
 
 [display]
 
@@ -35,6 +38,10 @@ project/assembly_name="GrafosDiscretas"
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/AsepriteWizard/plugin.cfg", "res://addons/beehave/plugin.cfg", "res://addons/signal_lens/plugin.cfg", "res://addons/utility_ai/plugin.cfg")
+
+[gui]
+
+theme/default_font_multichannel_signed_distance_field=true
 
 [rendering]
 

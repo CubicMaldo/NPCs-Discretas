@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=4 uid="uid://dc8fq3inf45py"]
+[gd_scene load_steps=31 format=4 uid="uid://dc8fq3inf45py"]
 
 [ext_resource type="Script" uid="uid://gxt75y1rbquu" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" uid="uid://bx5pi7mgsqpq3" path="res://scripts/systems/social_graph/SocialGraphManager.gd" id="2_sgm"]
@@ -13,7 +13,8 @@
 [ext_resource type="Texture2D" uid="uid://brm3yd20n8aun" path="res://sprites/enviroment/Tools.png" id="11_u8lgh"]
 [ext_resource type="Texture2D" uid="uid://r7f6v26itikk" path="res://sprites/enviroment/Roofs.png" id="12_hjnkw"]
 [ext_resource type="Texture2D" uid="uid://c0hv1b5ikpbdm" path="res://sprites/enviroment/Wall_Variations.png" id="13_rikml"]
-[ext_resource type="PackedScene" uid="uid://btf75ti5xii4" path="res://scenes/ui/SocialGraphPanel.tscn" id="14_jsdfw"]
+[ext_resource type="PackedScene" uid="uid://cr5rh04g5ydux" path="res://scenes/ui/UnifiedUIPanel.tscn" id="14_unified"]
+[ext_resource type="Script" uid="uid://b7dfxvjik4feq" path="res://scripts/systems/GodInteractionManager.gd" id="16_god"]
 
 [sub_resource type="NavigationPolygon" id="NavigationPolygon_1"]
 vertices = PackedVector2Array(620, 350, 10, 350, 10, 10, 620, 10)
@@ -3614,20 +3615,35 @@ navigation_visibility_mode = 1
 position = Vector2(0, 3)
 tile_map_data = PackedByteArray("AAAeAAUAAAAKAAEAAAASAAsAAAAKAAEAAAAaAAoAAAAKAAEAAAAYAAIAAQAMAAoAAAAYAAMAAQAMAAsAAAAGABMAAQAMAAoAAAAGABQAAQAMAAsAAAAhAA8AAQAMAAoAAAAhABAAAQAMAAsAAAANAAQAAQAMAAoAAAANAAUAAQAMAAsAAAAkABIAAQAQAAAAAAAaAAEAAQAUAAEAAAAFABMAAQAVAAAAAAAJAAgAAQASAAAAAAAWABIAAQAPAAAAAAADAAgAAQAAAAsAAAAIAAUAAQAAAAsAAAAWAAAAAQAAAAsAAAAZABAAAQAAAAsAAAAiAAsAAQAAAAsAAAAkAAMAAQAAAAsAAAACAAwAAQAAAAcAAAACAA0AAQAAAAgAAAACAA4AAQAMAAgAAAADAAwAAQABAAcAAAADAA0AAQABAAgAAAADAA4AAQANAAgAAAAEAAwAAQACAAcAAAAEAA0AAQACAAgAAAAEAA4AAQAOAAgAAAACAAsAAQAAAAYAAAADAAsAAQABAAYAAAAEAAsAAQACAAYAAAAdAAwAAQAAAAUAAAAdAA0AAQAMAAUAAAAeAAwAAQABAAUAAAAeAA0AAQANAAUAAAAfAAwAAQACAAUAAAAfAA0AAQAOAAUAAAAdAAsAAQAAAAQAAAAeAAsAAQABAAQAAAAfAAsAAQACAAQAAAAIABAABAApAAoAAFAIAA8ABAAoAAoAAFAIAA4ABAAnAAoAAFAIAA0ABAAmAAoAAFAIAAwABAAlAAoAAFAIAAsABAAkAAoAAFAJABAABAApAAkAAFAJAA8ABAAoAAkAAFAJAA4ABAAnAAkAAFAJAA0ABAAmAAkAAFAJAAwABAAlAAkAAFAJAAsABAAkAAkAAFAKABAABAApAAgAAFAKAA8ABAAoAAgAAFAKAA4ABAAnAAgAAFAKAA0ABAAmAAgAAFAKAAwABAAlAAgAAFAKAAsABAAkAAgAAFALABAABAApAAcAAFALAA8ABAAoAAcAAFALAA4ABAAnAAcAAFALAA0ABAAmAAcAAFALAAwABAAlAAcAAFALAAsABAAkAAcAAFAMABAABAApAAYAAFAMAA8ABAAoAAYAAFAMAAwABAAlAAYAAFAMAAsABAAkAAYAAFAfAAcABAAkAAYAAGAfAAYABAAlAAYAAGAfAAMABAAoAAYAAGAfAAIABAApAAYAAGAgAAcABAAkAAcAAGAgAAYABAAlAAcAAGAgAAUABAAmAAcAAGAgAAQABAAnAAcAAGAgAAMABAAoAAcAAGAgAAIABAApAAcAAGAhAAcABAAkAAgAAGAhAAYABAAlAAgAAGAhAAUABAAmAAgAAGAhAAQABAAnAAgAAGAhAAMABAAoAAgAAGAhAAIABAApAAgAAGAiAAcABAAkAAkAAGAiAAYABAAlAAkAAGAiAAUABAAmAAkAAGAiAAQABAAnAAkAAGAiAAMABAAoAAkAAGAiAAIABAApAAkAAGAjAAcABAAkAAoAAGAjAAYABAAlAAoAAGAjAAUABAAmAAoAAGAjAAQABAAnAAoAAGAjAAMABAAoAAoAAGAjAAIABAApAAoAAGACAAEAAAAAAAcAAAACAAIAAAAAAAgAAAACAAMAAAAAAAkAAAADAAEAAAABAAcAAAADAAIAAAABAAgAAAADAAMAAAABAAkAAAAUABEAAAAAAAEAAAAUABIAAAAAAAIAAAAUABMAAAAAAAMAAAAVABEAAAABAAEAAAAVABIAAAABAAIAAAAVABMAAAABAAMAAAATAAIAAAAFAAMAAAAhABMAAQAFAAwAAAAhABQAAQAFAA0AAAAiABMAAQAGAAwAAAAiABQAAQAGAA0AAAAMABQAAQAFAAkAAAAMABUAAQAFAAoAAAANABQAAQAGAAkAAAANABUAAQAGAAoAAAAMAAYAAQAIAAoAAAAMAAcAAQAIAAsAAAAXAA4AAQABAAoAAAAPAAcAAQAFAA8AAAAPAAgAAQAFABAAAAAQAAcAAQAGAA8AAAAQAAgAAQAGABAAAAAdABAAAQAEAAoAAAAaABIAAQAAABAAAAAdABMAAQAPAAgAAAABABMAAQAAAAAAAAABABQAAQAAAAEAAAACABMAAQABAAAAAAACABQAAQABAAEAAAAkAAwAAQADAAAAAAAkAA0AAQADAAEAAAAlAAwAAQAEAAAAAAAlAA0AAQAEAAEAAAA=")
 tile_set = SubResource("TileSet_qkm1d")
+collision_visibility_mode = 1
+navigation_enabled = false
 
 [node name="NPC_2" parent="." instance=ExtResource("3_npc")]
-position = Vector2(500, 100)
+position = Vector2(526, 78)
+npc_name = "Bob"
+
+[node name="NPC_4" parent="." instance=ExtResource("3_npc")]
+position = Vector2(306, 180)
+npc_name = "Bob"
+
+[node name="NPC_5" parent="." instance=ExtResource("3_npc")]
+position = Vector2(454, 338)
 npc_name = "Bob"
 
 [node name="NPC_3" parent="." instance=ExtResource("3_npc")]
-position = Vector2(359, 197)
+position = Vector2(95, 247)
 npc_name = "Charlie"
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
 [node name="DebugButton" type="Button" parent="CanvasLayer"]
+visible = false
 offset_right = 160.0
 offset_bottom = 40.0
 text = "Print Connections"
 
-[node name="SocialGraphPanel" parent="CanvasLayer" instance=ExtResource("14_jsdfw")]
+[node name="UnifiedUIPanel" parent="CanvasLayer" instance=ExtResource("14_unified")]
+metadata/_edit_lock_ = true
+
+[node name="GodInteractionManager" type="Node" parent="."]
+script = ExtResource("16_god")

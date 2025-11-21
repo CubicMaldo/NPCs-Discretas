@@ -7,6 +7,9 @@ extends CharacterBody2D
 @export var personality_component: PersonalityComponent
 @export var base_emotion: Emotion
 
+## Configuración de interacciones
+@export var interaction_config: InteractionConfig
+
 ## Referencias a componentes
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var utility_label: Label = $UtilityLabel
@@ -45,6 +48,10 @@ func _ready() -> void:
 	social_component.owner_id = npc_id
 	if social_graph_manager:
 		social_component.set_graph_manager(social_graph_manager)
+	
+	# Load default config if none provided
+	if not interaction_config:
+		interaction_config = InteractionConfig.new()
 	
 	setup_ai()
 
@@ -87,27 +94,30 @@ func talk_to(other_npc: NPC) -> void:
 	if personality_component and other_npc.personality_component:
 		compatibility = personality_component.calculate_compatibility(other_npc.personality_component)
 	
-	var delta = 0.1 * compatibility
-	# Random chance for bad interaction
-	if randf() < 0.1:
-		delta = -0.1
-		print("[%s] Talked to %s (Bad outcome)" % [name, other_npc.name])
+	var delta = interaction_config.talk_familiarity_gain * compatibility
+	var is_bad = randf() < interaction_config.bad_talk_chance
+	
+	if is_bad:
+		delta = interaction_config.talk_familiarity_loss
+		# print("[%s] Talked to %s (Bad outcome)" % [name, other_npc.name])
 	else:
-		print("[%s] Talked to %s (Good outcome)" % [name, other_npc.name])
+		# print("[%s] Talked to %s (Good outcome)" % [name, other_npc.name])
+		pass
 		
 	social_component.update_familiarity(other_npc, delta)
 	if social_graph_manager and social_graph_manager.has_method("register_interaction"):
-		social_graph_manager.register_interaction(self, other_npc)
+		social_graph_manager.register_interaction(self, other_npc, delta, {"type": "talk", "result": "bad" if is_bad else "good"})
 
 func fight_with(other_npc: NPC) -> void:
 	if not other_npc: return
 	
-	print("[%s] Fighting with %s!" % [name, other_npc.name])
+	# print("[%s] Fighting with %s!" % [name, other_npc.name])
 	# Fighting drastically reduces familiarity
-	social_component.update_familiarity(other_npc, -0.5)
+	var delta = interaction_config.fight_familiarity_loss
+	social_component.update_familiarity(other_npc, delta)
 	
 	if social_graph_manager and social_graph_manager.has_method("register_interaction"):
-		social_graph_manager.register_interaction(self, other_npc)
+		social_graph_manager.register_interaction(self, other_npc, delta, {"type": "fight"})
 
 # Requests an external decision system (provided by an addon) to determine the next action.
 func choose_action() -> String:

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="InteractionConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/InteractionConfig.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+talk_familiarity_gain = 5.0
+talk_bad_chance = 0.15
+talk_bad_familiarity_loss = 8.0
+fight_familiarity_loss = 15.0

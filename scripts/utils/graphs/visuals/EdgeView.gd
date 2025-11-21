@@ -16,7 +16,7 @@ var show_direction: bool = false
 const NODE_VISUAL_RADIUS := 36.0
 const BASE_WIDTH := 3.0
 const MAX_WIDTH := 10.0
-const ARROW_DISTANCE_FROM_TARGET := 25.0  # Distance from target node to place arrow
+const ARROW_DISTANCE_FROM_TARGET := 25.0 # Distance from target node to place arrow
 
 
 func _compute_clipped_endpoints() -> Dictionary:

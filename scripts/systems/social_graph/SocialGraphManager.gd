@@ -5,8 +5,8 @@ extends Node
 var social_graph: SocialGraph
 
 ## Señales espejo del grafo social para que otros sistemas se conecten aquí.
-signal interaction_registered(a_key, b_key, new_familiarity)
-signal interaction_registered_ids(a_id, b_id, new_familiarity)
+signal interaction_registered(a_key, b_key, new_familiarity, options)
+signal interaction_registered_ids(a_id, b_id, new_familiarity, options)
 
 func _ready() -> void:
 	social_graph = SocialGraph.new()
@@ -246,8 +246,8 @@ func stress_test(num_nodes: int, num_edges: int) -> Dictionary:
 func test_edge_cases() -> Array[String]:
 	return social_graph.test_edge_cases()
 
-func _on_interaction_registered(a_key, b_key, _delta, new_weight) -> void:
-	interaction_registered.emit(a_key, b_key, new_weight)
+func _on_interaction_registered(a_key, b_key, _delta, new_weight, options = {}) -> void:
+	interaction_registered.emit(a_key, b_key, new_weight, options)
 
-func _on_interaction_registered_ids(a_id, b_id, _delta, new_weight) -> void:
-	interaction_registered_ids.emit(a_id, b_id, new_weight)
+func _on_interaction_registered_ids(a_id, b_id, _delta, new_weight, options = {}) -> void:
+	interaction_registered_ids.emit(a_id, b_id, new_weight, options)

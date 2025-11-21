@@ -6,6 +6,8 @@ extends Control
 
 var is_panel_visible: bool = false
 
+signal node_selected(node_id)
+
 func _ready() -> void:
 	# Initialize panel off-screen (right side)
 	panel.anchor_left = 1.0
@@ -13,6 +15,12 @@ func _ready() -> void:
 	panel.offset_left = 0
 	panel.offset_right = 400 # Width of panel
 	
+	if graph_display:
+		graph_display.node_selected.connect(_on_node_selected)
+
+func _on_node_selected(node_id) -> void:
+	node_selected.emit(node_id)
+
 func toggle_visibility() -> void:
 	is_panel_visible = !is_panel_visible
 	
@@ -35,6 +43,13 @@ func _refresh_graph() -> void:
 	var graph_manager = get_tree().get_first_node_in_group("social_graph_manager")
 	if graph_manager and graph_manager.social_graph:
 		print("SocialGraphPanel: Found SocialGraphManager. Displaying graph...")
+		print("SocialGraphPanel: Graph has %d nodes" % graph_manager.social_graph.get_nodes().size())
 		graph_display.display_graph(graph_manager.social_graph)
 	else:
 		print("SocialGraphPanel: No SocialGraphManager found (or no graph).")
+
+
+## Reset the graph view to default zoom and center
+func reset_view() -> void:
+	if graph_display and graph_display.has_method("reset_view"):
+		graph_display.reset_view()

@@ -1,0 +1,158 @@
+[gd_scene load_steps=7 format=3 uid="uid://cr5rh04g5ydux"]
+
+[ext_resource type="Script" uid="uid://dvhkm3uxdblxr" path="res://scripts/ui/UnifiedUIController.gd" id="1_controller"]
+[ext_resource type="Script" uid="uid://f3rodujd6g18" path="res://scripts/utils/graphs/visuals/GraphDisplay.gd" id="2_display"]
+[ext_resource type="PackedScene" uid="uid://cvutvlq3tomm5" path="res://scenes/ui/GraphNodeView.tscn" id="3_node_view"]
+[ext_resource type="PackedScene" uid="uid://cvutvcf6tomm5" path="res://scenes/ui/GraphEdgeView.tscn" id="4_edge_view"]
+[ext_resource type="Script" uid="uid://bbywhdxj5egcy" path="res://scripts/ui/LogController.gd" id="5_log"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.1, 0.1, 0.15, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.5, 0.7, 0.8)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 8
+
+[node name="UnifiedUIPanel" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_controller")
+
+[node name="Panel" type="Panel" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 20.0
+offset_right = 300.0
+offset_bottom = 320.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/MarginContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Social Simulation Panel"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="TabContainer" type="TabContainer" parent="Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="Log" type="MarginContainer" parent="Panel/MarginContainer/VBoxContainer/TabContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+metadata/_tab_index = 0
+
+[node name="LogController" type="Control" parent="Panel/MarginContainer/VBoxContainer/TabContainer/Log"]
+layout_mode = 2
+script = ExtResource("5_log")
+
+[node name="Panel" type="Panel" parent="Panel/MarginContainer/VBoxContainer/TabContainer/Log/LogController"]
+visible = false
+layout_mode = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/MarginContainer/VBoxContainer/TabContainer/Log/LogController/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="Panel/MarginContainer/VBoxContainer/TabContainer/Log/LogController/Panel/MarginContainer"]
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Panel/MarginContainer/VBoxContainer/TabContainer/Log/LogController"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="Panel/MarginContainer/VBoxContainer/TabContainer/Log/LogController/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_font_sizes/normal_font_size = 11
+bbcode_enabled = true
+text = "[i]Log started...[/i]
+"
+fit_content = true
+scroll_following = true
+
+[node name="Graph" type="MarginContainer" parent="Panel/MarginContainer/VBoxContainer/TabContainer"]
+visible = false
+layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+metadata/_tab_index = 1
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="Panel/MarginContainer/VBoxContainer/TabContainer/Graph"]
+layout_mode = 2
+stretch = true
+
+[node name="SubViewport" type="SubViewport" parent="Panel/MarginContainer/VBoxContainer/TabContainer/Graph/SubViewportContainer"]
+handle_input_locally = false
+size = Vector2i(2, 2)
+render_target_update_mode = 0
+
+[node name="Camera2D" type="Camera2D" parent="Panel/MarginContainer/VBoxContainer/TabContainer/Graph/SubViewportContainer/SubViewport"]
+
+[node name="GraphDisplay" type="Node2D" parent="Panel/MarginContainer/VBoxContainer/TabContainer/Graph/SubViewportContainer/SubViewport"]
+script = ExtResource("2_display")
+node_scene = ExtResource("3_node_view")
+edge_scene = ExtResource("4_edge_view")
+layout_type = "circular"
+edge_label_mode = "weight"
+
+[node name="ToggleButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -50.0
+offset_top = 330.0
+offset_right = 50.0
+offset_bottom = 355.0
+grow_horizontal = 2
+text = "Show UI"

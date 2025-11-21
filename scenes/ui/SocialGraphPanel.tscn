@@ -48,7 +48,7 @@ grow_vertical = 2
 
 [node name="TitleLabel" type="Label" parent="Panel/VBoxContainer"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 16
 text = "Social Network"
 horizontal_alignment = 1
 

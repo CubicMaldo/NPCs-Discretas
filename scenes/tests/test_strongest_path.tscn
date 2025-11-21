@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://c28vr7wpj8f5v"]
+
+[ext_resource type="Script" path="res://scripts/tests/TestStrongestPath.gd" id="1_strongest"]
+
+[node name="TestStrongestPath" type="Node"]
+script = ExtResource("1_strongest")

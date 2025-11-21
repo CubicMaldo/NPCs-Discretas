@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PersonalityComponent" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/entities/PersonalityComponent.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+openness = 0.5
+conscientiousness = 0.7
+extraversion = 0.6
+agreeableness = 0.5
+neuroticism = 0.4
+aggression = 0.6
+impulsivity = 0.5

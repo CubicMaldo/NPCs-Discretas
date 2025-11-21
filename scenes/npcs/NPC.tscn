@@ -1,6 +1,7 @@
 [gd_scene load_steps=20 format=3 uid="uid://ccxc1q7qwg4j6"]
 
 [ext_resource type="Script" uid="uid://dld20h80s6t7l" path="res://scripts/entities/NPC.gd" id="1_npc"]
+[ext_resource type="Texture2D" uid="uid://cmjy74ufoo588" path="res://scenes/main/Custom___Edited_-_Minecraft_Customs_-_Allies_-_Villagers__Undertale_Overworld-Style_-removebg-preview.png" id="2_iu6wm"]
 [ext_resource type="Script" uid="uid://l6yo2itr4lnf" path="res://addons/utility_ai/agent/agent.gd" id="2_utility_agent"]
 [ext_resource type="Script" uid="uid://cb0wlxa658a0p" path="res://scripts/ai/actions/action_bt_wrapper.gd" id="3_action_wrapper"]
 [ext_resource type="PackedScene" path="res://scripts/ai/bt/trees/social_interact_bt.tscn" id="4_social_bt"]
@@ -18,9 +19,7 @@
 [sub_resource type="ImageTexture" id="ImageTexture_3egug"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_interaction"]
-radius = 200.0
-
-[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_qvc14"]
+radius = 95.189285
 
 [sub_resource type="Curve" id="Curve_cmg02"]
 _data = [Vector2(0, 0.3071429), 0.0, 0.0, 0, 0, Vector2(0.66386557, 0.025743723), 0.0, 0.0, 0, 0, Vector2(0.8795518, 0.3071429), 0.0, 0.0, 0, 0]
@@ -35,6 +34,8 @@ point_count = 2
 [node name="NPC" type="CharacterBody2D" node_paths=PackedStringArray("personality_component") groups=["npc"]]
 collision_layer = 2
 script = ExtResource("1_npc")
+npc_id = null
+npc_name = null
 personality_component = NodePath("PersonalityComponent")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
@@ -75,9 +76,9 @@ position = Vector2(0, -15)
 shape = SubResource("CapsuleShape2D_body")
 
 [node name="Sprite2D2" type="Sprite2D" parent="."]
-position = Vector2(0, -10)
-scale = Vector2(16, 20)
-texture = SubResource("PlaceholderTexture2D_qvc14")
+position = Vector2(-1.000001, -14)
+scale = Vector2(0.8809524, 0.6702129)
+texture = ExtResource("2_iu6wm")
 
 [node name="UtilityAiAgent" type="Node" parent="."]
 script = ExtResource("2_utility_agent")

@@ -76,6 +76,120 @@ static func shortest_path(graph: Graph, source, target) -> Dictionary:
 	return result
 
 
+## Encuentra el camino "más fuerte" entre dos nodos en un grafo dirigido.
+## En lugar de buscar el camino de menor costo (suma), busca el de mayor confianza (producto).
+## Útil para encontrar la cadena de relaciones más confiable entre NPCs.
+##
+## Algoritmo: Dijkstra modificado maximizando producto de pesos en lugar de minimizar suma.
+## Asume que los pesos representan confianza/familiaridad en escala [0-100].
+##
+## Retorna:
+## - reachable: bool - Si existe camino de source a target
+## - strength: float - Fuerza acumulada del camino (producto de pesos normalizados)
+## - path: Array - Secuencia de nodos desde source hasta target
+static func strongest_path(graph: Graph, source, target) -> Dictionary:
+	var result := {
+		"reachable": false,
+		"strength": 0.0,
+		"path": []
+	}
+	
+	if graph == null or source == null or target == null:
+		return result
+	
+	if source == target:
+		if graph.has_vertex(source):
+			result["reachable"] = true
+			result["path"] = [source]
+			result["strength"] = 1.0 # Producto neutro
+		return result
+	
+	if not graph.has_vertex(source) or not graph.has_vertex(target):
+		return result
+	
+	# Para maximizar producto, trabajamos con logaritmos (max producto = max suma de logs)
+	# strength[node] = producto acumulado de pesos normalizados
+	var strength: Dictionary = {}
+	var previous: Dictionary = {}
+	var pending: Array = [source]
+	strength[source] = 1.0 # Producto neutro
+	var visited: Dictionary = {}
+	
+	while not pending.is_empty():
+		var current = _pop_highest(pending, strength)
+		
+		if visited.has(current):
+			continue
+		visited[current] = true
+		
+		if current == target:
+			break
+		
+		var neighbor_weights: Dictionary = graph.get_neighbor_weights(current)
+		for neighbor in neighbor_weights.keys():
+			if visited.has(neighbor):
+				continue
+			
+			var weight: float = float(neighbor_weights[neighbor])
+			
+			# Normalizar peso [0-100] a [0-1]
+			var normalized_weight: float = clamp(weight / 100.0, 0.0, 1.0)
+			
+			# Manejar peso 0 (sin confianza) - no propagar
+			if normalized_weight <= 0.0:
+				continue
+			
+			var current_strength: float = float(strength.get(current, 0.0))
+			var candidate: float = current_strength * normalized_weight
+			var existing: float = float(strength.get(neighbor, 0.0))
+			
+			# Maximizar en lugar de minimizar
+			if candidate > existing:
+				strength[neighbor] = candidate
+				previous[neighbor] = current
+				if not pending.has(neighbor):
+					pending.append(neighbor)
+	
+	# Si no alcanzamos el target
+	if not strength.has(target) or strength[target] <= 0.0:
+		return result
+	
+	# Reconstruir camino
+	var path: Array = []
+	var cursor = target
+	while true:
+		path.insert(0, cursor)
+		if cursor == source:
+			break
+		cursor = previous.get(cursor, null)
+		if cursor == null:
+			path.clear()
+			return result
+	
+	result["reachable"] = true
+	result["strength"] = float(strength.get(target, 0.0))
+	result["path"] = path
+	return result
+
+
+## Helper para _pop_highest: extrae el nodo con mayor strength de la cola.
+static func _pop_highest(queue: Array, strengths: Dictionary):
+	var best_index := 0
+	var best_key = queue[0]
+	var best_strength: float = float(strengths.get(best_key, 0.0))
+	
+	for i in range(1, queue.size()):
+		var candidate = queue[i]
+		var candidate_strength: float = float(strengths.get(candidate, 0.0))
+		if candidate_strength > best_strength:
+			best_strength = candidate_strength
+			best_key = candidate
+			best_index = i
+	
+	queue.remove_at(best_index)
+	return best_key
+
+
 static func mutual_metrics(graph: Graph, a, b, min_weight: float = 0.0) -> Dictionary:
 	var result := {
 		"count": 0,

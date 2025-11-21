@@ -560,6 +560,34 @@ func get_shortest_path(a, b) -> Dictionary:
 	return result
 
 
+## Busca el camino dirigido más fuerte (máxima confianza acumulada) entre dos actores.
+## [br]
+## IMPORTANTE: Busca el mejor camino siguiendo solo aristas dirigidas desde A hasta B.
+## El resultado representa la cadena de relaciones más confiable, calculada como producto
+## de pesos normalizados.
+func get_strongest_path(a, b) -> Dictionary:
+	var key_a = _graph_key_from_input(a)
+	var key_b = _graph_key_from_input(b)
+	if key_a == null or key_b == null:
+		return {
+			"reachable": false,
+			"strength": 0.0,
+			"path": [],
+			"path_ids": []
+		}
+	if not has_vertex(key_a) or not has_vertex(key_b):
+		return {
+			"reachable": false,
+			"strength": 0.0,
+			"path": [],
+			"path_ids": []
+		}
+	var result: Dictionary = GraphAlgorithms.strongest_path(self, key_a, key_b)
+	var path: Array = result.get("path", [])
+	result["path_ids"] = _keys_to_ids(path)
+	return result
+
+
 func get_mutual_connections(a, b, min_weight := 0.0) -> Dictionary:
 	var key_a = _graph_key_from_input(a)
 	var key_b = _graph_key_from_input(b)
